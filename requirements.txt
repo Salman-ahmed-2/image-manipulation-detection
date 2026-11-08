@@ -1,0 +1,28 @@
+# Core Web Framework & WSGI
+flask>=3.0.0
+werkzeug>=3.0.0
+gunicorn>=21.2.0
+
+# Deep Learning & Neural Models
+tensorflow>=2.15.0
+
+# Computer Vision & Image Processing
+pillow>=10.2.0
+opencv-python-headless>=4.9.0
+
+# Scientific Computing & Data Analysis
+numpy>=1.24.3
+pandas>=2.1.0
+scikit-learn>=1.3.0
+
+# Visualization & Reporting
+matplotlib>=3.8.0
+seaborn>=0.13.0
+fpdf2>=2.7.7
+
+# Configuration & Environment
+python-dotenv>=1.0.0
+
+# Testing & Quality Assurance
+pytest>=7.4.0
+pytest-cov>=4.1.0
