@@ -81,7 +81,7 @@ class Config:
     ELA_QUALITY: int = 90
     ELA_ENHANCEMENT_FACTOR: float = 10.0
     ELA_DISCLAIMER: str = (
-        "ELA visualization is an investigative aid. Bright regions indicate "
+        "ELA visualization is an investigative aid. Bright regions in the ELA image indicate "
         "potential compression inconsistencies and do not constitute definitive "
         "proof of digital manipulation."
     )
@@ -90,9 +90,13 @@ class Config:
     # Flask Web Application & Security
     # -------------------------------------------------------------------------
     SECRET_KEY: str = os.getenv(
-        "SECRET_KEY", "dev-insecure-secret-key-change-in-production-32-chars"
+        "SECRET_KEY", "replace-with-a-secure-random-32-char-key-in-production"
     )
+    FLASK_APP: str = os.getenv("FLASK_APP", "app.py")
+    FLASK_ENV: str = os.getenv("FLASK_ENV", "development")
     DEBUG: bool = os.getenv("FLASK_DEBUG", "1") == "1"
+    HOST: str = os.getenv("HOST", "127.0.0.1")
+    PORT: int = int(os.getenv("PORT", "5000"))
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
 
     @classmethod
@@ -102,7 +106,8 @@ class Config:
         Ensures all runtime directories exist before execution commences.
 
         Args:
-            app: Optional Flask application instance.
+            app: Optional Flask application instance whose configured upload
+                directory should also be created.
         """
         directories = [
             cls.DATA_DIR,
@@ -119,7 +124,9 @@ class Config:
             cls.REPORTS_DIR,
             cls.PREDICTIONS_DIR,
             cls.TEMP_DIR,
-            cls.UPLOAD_FOLDER,
+            Path(app.config.get("UPLOAD_FOLDER") or cls.UPLOAD_FOLDER)
+            if app is not None
+            else cls.UPLOAD_FOLDER,
         ]
 
         for directory in directories:
