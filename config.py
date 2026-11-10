@@ -119,6 +119,19 @@ class Config:
     BATCH_SIZE: int = 32
     DEFAULT_EPOCHS: int = 50
     RANDOM_SEED: int = 42
+    MOBILENET_WEIGHTS: str = "imagenet"
+    MOBILENET_BASE_MODEL_NAME: str = "mobilenetv2_base"
+    MOBILENET_MODEL_NAME: str = "mobilenet_classifier"
+    MOBILENET_NORMALIZATION_MODE: str = "mobilenet"
+    MOBILENET_HEAD_UNITS: tuple[int, int] = (256, 128)
+    MOBILENET_HEAD_DROPOUT_RATES: tuple[float, float] = (0.4, 0.3)
+    MOBILENET_OUTPUT_UNITS: int = 1
+    MOBILENET_INITIAL_LEARNING_RATE: float = 1e-3
+    MOBILENET_FINE_TUNE_LEARNING_RATE: float = 1e-5
+    MOBILENET_LAYERS_TO_UNFREEZE: int = 30
+    MOBILENET_WARMUP_EPOCHS: int = 15
+    MOBILENET_FINE_TUNE_EPOCHS: int = 25
+    MOBILENET_EARLY_STOPPING_PATIENCE: int = 5
 
     ACTIVE_MODEL: str = os.getenv("ACTIVE_MODEL", "mobilenet").lower()
     MODEL_PATH_CNN: Path = MODEL_DIR / "cnn_model.keras"
