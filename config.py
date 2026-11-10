@@ -98,6 +98,8 @@ class Config:
     HOST: str = os.getenv("HOST", "127.0.0.1")
     PORT: int = int(os.getenv("PORT", "5000"))
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
+    LOG_FILE: Optional[Path] = ARTIFACTS_DIR / "app.log"
+    ENABLE_FILE_LOGGING: bool = os.getenv("ENABLE_FILE_LOGGING", "0") == "1"
 
     @classmethod
     def init_app(cls, app: Optional[Any] = None) -> None:
