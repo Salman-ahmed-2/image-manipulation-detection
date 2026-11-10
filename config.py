@@ -27,10 +27,50 @@ class Config:
     RAW_DATA_DIR: Path = DATA_DIR / "raw"
     CASIA_V1_DIR: Path = RAW_DATA_DIR / "casia_v1"
     CASIA_V2_DIR: Path = RAW_DATA_DIR / "casia_v2"
+    DATASET_IMAGE_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".tif"}
     ANNOTATIONS_DIR: Path = DATA_DIR / "annotations"
     PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
     METADATA_DIR: Path = DATA_DIR / "metadata"
+    DATASET_INVENTORY_PATH: Path = METADATA_DIR / "dataset_inventory.csv"
+    DATASET_LABELS_PATH: Path = METADATA_DIR / "dataset_labels.csv"
+    CORRUPT_FILES_LOG: Path = METADATA_DIR / "corrupt_files.log"
     SPLITS_DIR: Path = DATA_DIR / "splits"
+
+    CASIA_V1_VERSION: str = "CASIA_v1"
+    CASIA_V2_VERSION: str = "CASIA_v2"
+    AUTHENTIC_LABEL: int = 0
+    MANIPULATED_LABEL: int = 1
+    AUTHENTIC_LABEL_NAME: str = "Authentic"
+    MANIPULATED_LABEL_NAME: str = "Manipulated"
+    AUTHENTIC_PREFIX: str = "Au_"
+    TAMPERED_PREFIX: str = "Tp_"
+    COPY_MOVE_PREFIX: str = "Tp_S_"
+    SPLICING_PREFIXES: tuple[str, ...] = ("Tp_D_", "Sp_")
+    PRISTINE_MANIPULATION_TYPE: str = "Pristine"
+    COPY_MOVE_MANIPULATION_TYPE: str = "Copy-Move"
+    SPLICING_MANIPULATION_TYPE: str = "Splicing"
+    GENERAL_MANIPULATION_TYPE: str = "General"
+    DATASET_INVENTORY_COLUMNS: tuple[str, ...] = (
+        "image_id",
+        "filepath",
+        "filename",
+        "dataset_version",
+        "format",
+        "width",
+        "height",
+        "channels",
+        "filesize_bytes",
+        "is_valid",
+    )
+    DATASET_LABEL_COLUMNS: tuple[str, ...] = (
+        "image_id",
+        "filename",
+        "label",
+        "label_name",
+        "manipulation_type",
+        "group_id",
+        "dataset_version",
+    )
 
     ARTIFACTS_DIR: Path = BASE_DIR / "artifacts"
     MODEL_DIR: Path = ARTIFACTS_DIR / "models"
