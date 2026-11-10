@@ -12,8 +12,14 @@ from pathlib import Path
 from typing import Any, Optional, Set, Tuple
 from dotenv import load_dotenv
 
-# Ingest environment variables from .env file if present
-load_dotenv()
+
+
+# Ingest environment variables from .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 
 class Config:
