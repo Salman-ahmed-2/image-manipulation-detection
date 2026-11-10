@@ -33,6 +33,7 @@ class Config:
     METADATA_DIR: Path = DATA_DIR / "metadata"
     DATASET_INVENTORY_PATH: Path = METADATA_DIR / "dataset_inventory.csv"
     DATASET_LABELS_PATH: Path = METADATA_DIR / "dataset_labels.csv"
+    DATASET_SPLIT_PATH: Path = METADATA_DIR / "dataset_split.csv"
     CORRUPT_FILES_LOG: Path = METADATA_DIR / "corrupt_files.log"
     SPLITS_DIR: Path = DATA_DIR / "splits"
 
@@ -71,6 +72,20 @@ class Config:
         "group_id",
         "dataset_version",
     )
+    DATASET_SPLIT_COLUMNS: tuple[str, ...] = (
+        "image_id",
+        "filename",
+        "label",
+        "label_name",
+        "group_id",
+        "split",
+        "dataset_version",
+    )
+    DATASET_SPLIT_NAMES: tuple[str, ...] = ("train", "validation", "test")
+    DATASET_TRAIN_RATIO: float = 0.70
+    DATASET_VALIDATION_RATIO: float = 0.15
+    DATASET_TEST_RATIO: float = 0.15
+    DATASET_MINIMUM_GROUPS: int = 4
 
     ARTIFACTS_DIR: Path = BASE_DIR / "artifacts"
     MODEL_DIR: Path = ARTIFACTS_DIR / "models"
