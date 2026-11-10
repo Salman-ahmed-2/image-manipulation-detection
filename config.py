@@ -86,6 +86,9 @@ class Config:
     DATASET_VALIDATION_RATIO: float = 0.15
     DATASET_TEST_RATIO: float = 0.15
     DATASET_MINIMUM_GROUPS: int = 4
+    EVALUATION_MODEL_CHOICES: tuple[str, ...] = ("cnn", "mobilenet", "both")
+    RESULTS_TEMPLATE_PATH: Path = BASE_DIR / "docs" / "reports" / "RESULTS_TEMPLATE.md"
+    PLOT_DPI: int = 150
 
     ARTIFACTS_DIR: Path = BASE_DIR / "artifacts"
     MODEL_DIR: Path = ARTIFACTS_DIR / "models"
