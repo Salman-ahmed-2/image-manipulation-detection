@@ -78,6 +78,8 @@ class Config:
     # -------------------------------------------------------------------------
     # Image Forensics & Error Level Analysis (ELA)
     # -------------------------------------------------------------------------
+    ELA_MIN_QUALITY: int = 1
+    ELA_MAX_QUALITY: int = 95
     ELA_QUALITY: int = 90
     ELA_ENHANCEMENT_FACTOR: float = 10.0
     ELA_DISCLAIMER: str = (
