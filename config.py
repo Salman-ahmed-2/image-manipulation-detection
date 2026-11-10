@@ -48,6 +48,7 @@ class Config:
     ALLOWED_EXTENSIONS: Set[str] = {"jpg", "jpeg", "png"}
     MAX_IMAGE_PIXELS: int = 50_000_000  # Pillow decompression bomb protection
     TEMP_FILE_EXPIRY: int = 1800  # 30 minutes in seconds
+    PIXEL_VALUE_MAX: float = 255.0
 
     # Magic byte signatures for verification
     MAGIC_BYTES: dict[str, bytes] = {
