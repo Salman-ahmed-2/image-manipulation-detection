@@ -75,6 +75,24 @@ def test_home_page_returns_ok(client: FlaskClient) -> None:
     assert response.status_code == 200
 
 
+def test_navigating_home_cleans_the_active_session_directory(client: FlaskClient) -> None:
+    """Returning home removes the current session's temporary image files."""
+    analysis_response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(_synthetic_jpeg()), "synthetic.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+    session_id = analysis_response.get_json()["session_id"]
+    session_directory = Path(Config.UPLOAD_FOLDER) / session_id
+    assert session_directory.is_dir()
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert not session_directory.exists()
+
+
 def test_about_page_returns_ok(client: FlaskClient) -> None:
     """The about page is available."""
     response = client.get("/about")
@@ -164,6 +182,7 @@ def test_report_download_returns_pdf_for_completed_session(client: FlaskClient) 
     assert response.headers["Content-Disposition"] == (
         f"attachment; filename=forensic_report_{session_id}.pdf"
     )
+    assert not (Path(Config.UPLOAD_FOLDER) / session_id).exists()
 
 
 def test_report_download_returns_not_found_for_unknown_session(client: FlaskClient) -> None:

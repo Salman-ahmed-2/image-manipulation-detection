@@ -27,6 +27,7 @@ from src.utils.exceptions import (
     ReportGenerationError,
     ValidationError,
 )
+from src.utils.file_validator import cleanup_session_directory
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -166,6 +167,10 @@ def download_report(session_id: str) -> Any:
     except (KeyError, ReportGenerationError) as error:
         logger.error("Unable to create report for session %s: %s", session_id, error)
         abort(500)
+
+    cleanup_session_directory(session_id)
+    session.pop("session_id", None)
+    session.pop("analysis_result", None)
 
     return Response(
         pdf_bytes,

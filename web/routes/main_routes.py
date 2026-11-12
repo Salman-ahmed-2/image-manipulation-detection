@@ -5,10 +5,11 @@ from __future__ import annotations
 from time import monotonic
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, render_template
+from flask import Blueprint, current_app, jsonify, render_template, session
 
 from config import Config
 from src.models.model_loader import ModelLoader
+from src.utils.file_validator import cleanup_session_directory
 
 main_bp = Blueprint("main", __name__)
 
@@ -20,6 +21,11 @@ def index() -> str:
     Returns:
         The rendered home page.
     """
+    session_id = session.get("session_id")
+    if isinstance(session_id, str):
+        cleanup_session_directory(session_id)
+    session.pop("session_id", None)
+    session.pop("analysis_result", None)
     return render_template("index.html")
 
 
