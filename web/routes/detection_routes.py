@@ -13,6 +13,7 @@ from flask import (
     jsonify,
     render_template,
     request,
+    Response,
     send_from_directory,
     session,
     url_for,
@@ -20,7 +21,12 @@ from flask import (
 
 from config import Config
 from src.services.detection_service import DetectionService
-from src.utils.exceptions import PayloadTooLargeError, ValidationError
+from src.services.report_service import ReportService
+from src.utils.exceptions import (
+    PayloadTooLargeError,
+    ReportGenerationError,
+    ValidationError,
+)
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -135,17 +141,39 @@ def analyze() -> Any:
 
 @detection_bp.get("/report/<session_id>")
 def download_report(session_id: str) -> Any:
-    """Provide the report endpoint reserved for the report-generation service.
+    """Generate and return the PDF report for the current browser session.
 
     Args:
         session_id: Identifier for the completed analysis.
 
     Returns:
-        An HTTP error indicating an unavailable or unknown report.
+        A downloadable PDF response, or a not-found/internal error response.
     """
-    if session.get("session_id") != session_id or not session.get("analysis_result"):
+    analysis_result = session.get("analysis_result")
+    if (
+        session.get("session_id") != session_id
+        or not isinstance(analysis_result, dict)
+        or not analysis_result
+    ):
         abort(404)
-    abort(501, description="PDF report generation is not available yet.")
+
+    try:
+        pdf_bytes = ReportService.generate_pdf_report(
+            analysis_result,
+            Path(analysis_result["original_image_path"]),
+            Path(analysis_result["ela_image_path"]),
+        )
+    except (KeyError, ReportGenerationError) as error:
+        logger.error("Unable to create report for session %s: %s", session_id, error)
+        abort(500)
+
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=forensic_report_{session_id}.pdf"
+        },
+    )
 
 
 @detection_bp.get("/static/temp/<session_id>/<filename>")
