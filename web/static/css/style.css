@@ -1,0 +1,260 @@
+:root {
+  color-scheme: light;
+  --ink: #17263c;
+  --muted-ink: #64748b;
+  --brand: #2459a6;
+  --brand-dark: #183e78;
+  --surface: #ffffff;
+  --page: #f5f8fc;
+  --line: #dce5f0;
+  --soft-blue: #edf4ff;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+a {
+  text-underline-offset: 0.18em;
+}
+
+.site-navbar {
+  background: #10243e;
+  box-shadow: 0 0.25rem 1.25rem rgb(15 35 60 / 12%);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.brand-mark {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 0.65rem;
+  color: #b9d6ff;
+}
+
+.nav-link {
+  border-radius: 0.5rem;
+}
+
+.nav-link.active {
+  color: #ffffff !important;
+  background: rgb(255 255 255 / 12%);
+}
+
+.hero-section {
+  max-width: 52rem;
+  padding: clamp(1.5rem, 5vw, 3.5rem) 0 0.5rem;
+}
+
+.hero-section .lead,
+.page-header .lead {
+  max-width: 46rem;
+  line-height: 1.7;
+}
+
+.eyebrow,
+.section-kicker {
+  color: var(--brand);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.upload-card,
+.method-card,
+.team-card,
+.card {
+  border-radius: 1rem;
+}
+
+.upload-card {
+  overflow: hidden;
+}
+
+.drop-zone {
+  display: flex;
+  min-height: 14rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  border: 2px dashed #9bb1cc;
+  border-radius: 0.85rem;
+  background: #fbfdff;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--brand);
+  background: var(--soft-blue);
+  box-shadow: 0 0 0 0.25rem rgb(36 89 166 / 10%);
+  outline: none;
+}
+
+.drop-zone.drag-over {
+  transform: scale(1.01);
+}
+
+.drop-zone-icon,
+.method-icon {
+  font-size: 2rem;
+}
+
+.drop-zone-icon {
+  margin-bottom: 0.75rem;
+  color: var(--brand);
+}
+
+.method-card {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.method-card:hover {
+  transform: translateY(-0.2rem);
+}
+
+.preview-panel {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: #fbfdff;
+}
+
+.image-preview {
+  display: block;
+  width: 100%;
+  max-height: 22rem;
+  border-radius: 0.5rem;
+  background: #e9eef5;
+  object-fit: contain;
+}
+
+.form-select,
+.form-control {
+  border-color: #cbd7e5;
+  border-radius: 0.65rem;
+  min-height: 2.85rem;
+}
+
+.btn {
+  border-radius: 0.65rem;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--brand);
+  --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-bg: var(--brand-dark);
+  --bs-btn-hover-border-color: var(--brand-dark);
+  --bs-btn-active-bg: var(--brand-dark);
+  --bs-btn-active-border-color: var(--brand-dark);
+}
+
+.interpretation-note {
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #f8faff;
+}
+
+.team-number {
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: var(--soft-blue);
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.site-footer {
+  background: #10243e;
+  color: #bac8d9;
+  font-size: 0.875rem;
+}
+
+.loading-overlay {
+  position: fixed;
+  z-index: 1080;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(245 248 252 / 88%);
+  backdrop-filter: blur(3px);
+}
+
+.loading-panel {
+  width: min(100%, 28rem);
+  padding: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: 0 1rem 3rem rgb(15 35 60 / 14%);
+}
+
+.error-page {
+  max-width: 36rem;
+  padding: clamp(2rem, 8vw, 5rem) 1rem;
+}
+
+.error-icon {
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+  border-radius: 1.5rem;
+  background: #fff0ed;
+  color: #b54732;
+  font-size: 2.25rem;
+}
+
+.error-code {
+  color: #9aabc0;
+  font-size: clamp(3rem, 10vw, 5rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (max-width: 575.98px) {
+  .navbar-brand {
+    font-size: 0.98rem;
+  }
+
+  .hero-section {
+    padding-top: 1rem;
+  }
+
+  .drop-zone {
+    min-height: 12rem;
+    padding: 1.5rem 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
