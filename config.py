@@ -113,6 +113,8 @@ class Config:
     MAX_IMAGE_PIXELS: int = 50_000_000  # Pillow decompression bomb protection
     TEMP_FILE_EXPIRY: int = 1800  # 30 minutes in seconds
     PIXEL_VALUE_MAX: float = 255.0
+    MAX_ANALYSIS_LATENCY_SECONDS: float = 5.0
+    PERFORMANCE_TEST_ITERATIONS: int = 10
 
     # Magic byte signatures for verification
     MAGIC_BYTES: dict[str, bytes] = {
