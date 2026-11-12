@@ -4,68 +4,13 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
-from typing import Iterator
+from unittest.mock import Mock
 
 import pytest
 from flask import Flask, render_template
 from flask.testing import FlaskClient
-from PIL import Image
 
-from app import create_app
 from config import Config
-from src.models.model_loader import MockFallbackModel, ModelLoader
-
-
-@pytest.fixture
-def app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Flask]:
-    """Create a test application with isolated temporary uploads.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture.
-        tmp_path: Per-test temporary filesystem path.
-
-    Yields:
-        A configured Flask application instance.
-    """
-    upload_folder = tmp_path / "uploads"
-    monkeypatch.setattr(Config, "UPLOAD_FOLDER", upload_folder)
-
-    def register_test_models() -> None:
-        """Populate the model registry without loading model weights."""
-        for model_name in ("cnn", "mobilenet"):
-            ModelLoader.register_model(model_name, MockFallbackModel(model_name))
-
-    monkeypatch.setattr(ModelLoader, "load_all_models", register_test_models)
-    ModelLoader.clear_cache()
-    test_app = create_app(Config)
-    test_app.config.update(TESTING=True)
-    yield test_app
-    ModelLoader.clear_cache()
-
-
-@pytest.fixture
-def client(app: Flask) -> FlaskClient:
-    """Return a Flask test client.
-
-    Args:
-        app: Test application fixture.
-
-    Returns:
-        A Flask test client for the application.
-    """
-    return app.test_client()
-
-
-def _synthetic_jpeg() -> bytes:
-    """Encode a small synthetic RGB image as JPEG bytes.
-
-    Returns:
-        Encoded JPEG image content.
-    """
-    image = Image.new("RGB", (64, 64), color=(80, 120, 160))
-    buffer = BytesIO()
-    image.save(buffer, format="JPEG")
-    return buffer.getvalue()
 
 
 def test_home_page_returns_ok(client: FlaskClient) -> None:
@@ -84,11 +29,14 @@ def test_home_page_returns_ok(client: FlaskClient) -> None:
     assert 'js/main.js' in page
 
 
-def test_navigating_home_cleans_the_active_session_directory(client: FlaskClient) -> None:
+def test_navigating_home_cleans_the_active_session_directory(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+) -> None:
     """Returning home removes the current session's temporary image files."""
     analysis_response = client.post(
         "/analyze",
-        data={"image": (BytesIO(_synthetic_jpeg()), "synthetic.jpg")},
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
         content_type="multipart/form-data",
         headers={"Accept": "application/json"},
     )
@@ -157,11 +105,15 @@ def test_analyze_non_image_returns_bad_request(client: FlaskClient) -> None:
     assert response.get_json()["error_code"] == "INVALID_FILE_TYPE"
 
 
-def test_analyze_valid_synthetic_image_returns_json(client: FlaskClient) -> None:
+def test_analyze_valid_synthetic_image_returns_json(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+    mock_predictor: Mock,
+) -> None:
     """A synthetic JPEG is analyzed and returned with artifact URLs."""
     response = client.post(
         "/analyze",
-        data={"image": (BytesIO(_synthetic_jpeg()), "synthetic.jpg")},
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
         content_type="multipart/form-data",
         headers={"Accept": "application/json"},
     )
@@ -169,19 +121,29 @@ def test_analyze_valid_synthetic_image_returns_json(client: FlaskClient) -> None
     body = response.get_json()
     assert response.status_code == 200
     assert body["status"] == "success"
+    assert body["prediction"]["label"] == "Potentially Manipulated"
+    assert body["prediction"]["confidence"] == 93.4
     assert body["prediction"]["model_used"] == "mobilenet"
     assert body["artifacts"]["original_image_url"].startswith("/static/temp/")
     assert body["artifacts"]["ela_image_url"].startswith("/static/temp/")
     original_response = client.get(body["artifacts"]["original_image_url"])
+    ela_response = client.get(body["artifacts"]["ela_image_url"])
     assert original_response.status_code == 200
     assert original_response.mimetype == "image/jpeg"
+    assert ela_response.status_code == 200
+    assert ela_response.mimetype == "image/png"
+    mock_predictor.assert_called_once()
 
 
-def test_analyze_valid_synthetic_image_renders_html(client: FlaskClient) -> None:
+def test_analyze_valid_synthetic_image_renders_html(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+    mock_predictor: Mock,
+) -> None:
     """A browser upload receives the rendered results page."""
     response = client.post(
         "/analyze",
-        data={"image": (BytesIO(_synthetic_jpeg()), "synthetic.jpg")},
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
         content_type="multipart/form-data",
         headers={"Accept": "text/html"},
     )
@@ -189,7 +151,7 @@ def test_analyze_valid_synthetic_image_renders_html(client: FlaskClient) -> None
     assert response.status_code == 200
     page = response.get_data(as_text=True)
     assert "Potentially Manipulated" in page
-    assert "64 × 64 px" in page
+    assert "100 × 100 px" in page
     assert "RGB" in page
     assert "MobileNetV2" in page
     assert "Model Architecture" in page
@@ -197,6 +159,63 @@ def test_analyze_valid_synthetic_image_renders_html(client: FlaskClient) -> None
     assert "ms" in page
     assert Config.ELA_DISCLAIMER in page
     assert "Download PDF Report" in page
+    assert "93.4%" in page
+    assert "ela" in page.lower()
+    mock_predictor.assert_called_once()
+
+
+def test_analyze_png_renders_ela_view(
+    client: FlaskClient,
+    synthetic_png_bytes: bytes,
+    mock_predictor: Mock,
+) -> None:
+    """A synthetic PNG passes through analysis and serves its ELA visualization."""
+    response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(synthetic_png_bytes), "synthetic.png")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["status"] == "success"
+    assert body["artifacts"]["ela_image_url"].endswith("/ela_result.png")
+    ela_response = client.get(body["artifacts"]["ela_image_url"])
+    assert ela_response.status_code == 200
+    assert ela_response.mimetype == "image/png"
+    mock_predictor.assert_called_once()
+
+
+def test_executable_payload_disguised_as_jpeg_is_rejected(
+    client: FlaskClient,
+    synthetic_corrupt_bytes: bytes,
+) -> None:
+    """A non-image payload using a JPEG extension is rejected as a bad request."""
+    response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(synthetic_corrupt_bytes), "test.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["status"] == "error"
+
+
+def test_oversized_upload_returns_payload_too_large(
+    client: FlaskClient,
+    synthetic_oversized_bytes: bytes,
+) -> None:
+    """A request exceeding the configured upload size is rejected with HTTP 413."""
+    response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(synthetic_oversized_bytes), "oversized.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 413
 
 
 @pytest.mark.parametrize(
@@ -240,11 +259,15 @@ def test_result_template_accepts_nested_mock_results(
     assert "Analyze Another Image" in page
 
 
-def test_report_download_returns_pdf_for_completed_session(client: FlaskClient) -> None:
+def test_report_download_returns_pdf_for_completed_session(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+    mock_predictor: Mock,
+) -> None:
     """A completed synthetic-image analysis can be downloaded as a PDF report."""
     analysis_response = client.post(
         "/analyze",
-        data={"image": (BytesIO(_synthetic_jpeg()), "synthetic.jpg")},
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
         content_type="multipart/form-data",
         headers={"Accept": "application/json"},
     )
