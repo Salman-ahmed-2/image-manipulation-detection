@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import shutil
 import warnings
 from pathlib import Path
 from typing import Any
@@ -192,3 +193,49 @@ def save_upload_securely(file_storage: Any, session_id: str) -> Path:
     file_storage.stream.seek(0)
     file_storage.save(destination)
     return destination
+
+
+def cleanup_session_directory(session_id: str) -> bool:
+    """Remove a session's temporary upload directory when it exists.
+
+    Args:
+        session_id: Session-scoped directory identifier.
+
+    Returns:
+        True if the directory was removed; otherwise False.
+    """
+    if not isinstance(session_id, str):
+        logger.warning("Refusing to clean up a non-string session directory identifier.")
+        return False
+
+    safe_session_id = secure_filename(session_id)
+    if not safe_session_id or safe_session_id != session_id:
+        logger.warning("Refusing to clean up an invalid session directory identifier.")
+        return False
+
+    try:
+        upload_root = Path(Config.UPLOAD_FOLDER).resolve()
+        session_directory = upload_root / safe_session_id
+        if not session_directory.exists() and not session_directory.is_symlink():
+            return False
+        if session_directory.is_symlink():
+            session_directory.unlink()
+            logger.info("Removed temporary session directory link.")
+            return True
+        if not session_directory.is_dir():
+            logger.warning("Temporary session path is not a directory.")
+            return False
+        if not session_directory.resolve().is_relative_to(upload_root):
+            logger.warning("Refusing to remove a session directory outside the upload folder.")
+            return False
+
+        shutil.rmtree(session_directory)
+    except PermissionError as error:
+        logger.warning("Permission denied while removing a temporary session directory: %s", error)
+        return False
+    except (OSError, ValueError) as error:
+        logger.warning("Unable to remove a temporary session directory: %s", error)
+        return False
+
+    logger.info("Removed temporary session directory.")
+    return True

@@ -20,7 +20,11 @@ from src.utils.exceptions import (
     ReportGenerationError,
     ValidationError,
 )
-from src.utils.file_validator import save_upload_securely, validate_upload
+from src.utils.file_validator import (
+    cleanup_session_directory,
+    save_upload_securely,
+    validate_upload,
+)
 from src.utils.image_utils import bytes_to_pil, ensure_rgb, pil_to_bytes
 from src.utils.logger import get_logger
 
@@ -134,6 +138,36 @@ def test_save_upload_rejects_unsafe_session_id(tmp_path: Path, monkeypatch: pyte
 
     with pytest.raises(ValidationError, match="session"):
         save_upload_securely(_upload(_image_bytes("PNG"), "image.png"), "../outside")
+
+
+def test_cleanup_session_directory_removes_only_the_requested_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Remove the requested session's files without touching neighboring sessions."""
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
+    session_directory = tmp_path / "session-1"
+    other_session_directory = tmp_path / "session-2"
+    session_directory.mkdir()
+    other_session_directory.mkdir()
+    (session_directory / "upload.jpg").write_bytes(b"synthetic image")
+    (other_session_directory / "upload.jpg").write_bytes(b"keep")
+
+    assert cleanup_session_directory("session-1") is True
+    assert not session_directory.exists()
+    assert (other_session_directory / "upload.jpg").exists()
+
+
+def test_cleanup_session_directory_rejects_unsafe_and_missing_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Do not allow cleanup paths outside the upload folder or claim missing folders removed."""
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path / "uploads")
+    outside_directory = tmp_path / "outside"
+    outside_directory.mkdir()
+
+    assert cleanup_session_directory("../outside") is False
+    assert cleanup_session_directory("missing") is False
+    assert outside_directory.exists()
 
 
 @pytest.mark.parametrize("mode", ["L", "RGBA", "CMYK"])
