@@ -1,6 +1,43 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
+  const tooltipTriggers = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  if (typeof bootstrap !== "undefined") {
+    tooltipTriggers.forEach((element) => new bootstrap.Tooltip(element));
+  }
+
+  const resultsDashboard = document.getElementById("resultsDashboard");
+  if (resultsDashboard) {
+    const inspectToggle = document.getElementById("imageInspectToggle");
+    const dimensionsOutput = document.getElementById("inputDimensions");
+    const originalImage = document.getElementById("originalImage");
+
+    if (inspectToggle instanceof HTMLButtonElement) {
+      inspectToggle.addEventListener("click", () => {
+        const inspecting = resultsDashboard.classList.toggle("is-inspecting");
+        inspectToggle.setAttribute("aria-pressed", String(inspecting));
+        inspectToggle.innerHTML = inspecting
+          ? '<i class="bi bi-aspect-ratio me-2" aria-hidden="true"></i>Fit images to cards'
+          : '<i class="bi bi-zoom-in me-2" aria-hidden="true"></i>Inspect at full resolution';
+      });
+    }
+
+    if (
+      dimensionsOutput &&
+      originalImage instanceof HTMLImageElement
+    ) {
+      const updateDimensions = () => {
+        if (originalImage.naturalWidth > 0 && originalImage.naturalHeight > 0) {
+          dimensionsOutput.textContent =
+            `${originalImage.naturalWidth} × ${originalImage.naturalHeight} px`;
+        }
+      };
+
+      originalImage.addEventListener("load", updateDimensions);
+      updateDimensions();
+    }
+  }
+
   const uploadForm = document.getElementById("uploadForm");
   if (!uploadForm) {
     return;

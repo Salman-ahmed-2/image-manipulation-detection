@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Image Forensic Scanner · Analysis Results{% endblock %}
+
+{% block content %}
+{% set analysis = results|default({}, true) %}
+{% set result_verdict_code = verdict_code if verdict_code is defined else analysis.get('verdict_code', 0) %}
+{% set result_confidence = confidence if confidence is defined else analysis.get('confidence', 0) %}
+{% set result_model = model_used if model_used is defined else analysis.get('model_used', 'Unknown') %}
+{% set result_session_id = session_id if session_id is defined else analysis.get('session_id', '') %}
+{% set result_original_url = original_image_url if original_image_url is defined else analysis.get('original_image_url', analysis.get('original_image_path', '')) %}
+{% set result_ela_url = ela_image_url if ela_image_url is defined else analysis.get('ela_image_url', analysis.get('ela_image_path', '')) %}
+{% set result_dimensions = image_dimensions if image_dimensions is defined else analysis.get('image_dimensions') %}
+{% set result_latency = latency_ms if latency_ms is defined else analysis.get('latency_ms') %}
+{% set confidence_percent = [100, [0, result_confidence|float]|max]|min %}
+{% set is_authentic = result_verdict_code == 0 %}
+
+<section class="result-dashboard" id="resultsDashboard" aria-labelledby="resultsTitle">
+  <header class="result-header text-center mb-4">
+    <span class="section-kicker">Forensic screening results</span>
+    <h1 class="display-6 fw-bold mt-2 mb-3" id="resultsTitle">Analysis Complete</h1>
+    {% if is_authentic %}
+    <div class="badge text-bg-success verdict-badge" role="status">
+      🟢 Authentic Image
+    </div>
+    <p class="lead text-secondary mt-3 mb-0">
+      The deep learning model detected minimal statistical evidence of manipulation.
+    </p>
+    {% else %}
+    <div class="badge text-bg-danger verdict-badge" role="status">
+      🔴 Potentially Manipulated
+    </div>
+    <p class="lead text-secondary mt-3 mb-0">
+      The deep learning model identified anomalous compression or structural tampering traces.
+    </p>
+    {% endif %}
+    {% if timestamp is defined or analysis.get('timestamp') %}
+    <p class="small text-secondary mt-3 mb-0">
+      Analyzed <time>{{ timestamp if timestamp is defined else analysis.get('timestamp') }}</time>
+    </p>
+    {% endif %}
+  </header>
+
+  <section class="card border-0 shadow-sm mb-4" aria-labelledby="confidenceTitle">
+    <div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-baseline gap-3 mb-2">
+        <h2 class="h5 mb-0" id="confidenceTitle">Model Confidence</h2>
+        <strong class="fs-5">{{ "%.1f"|format(result_confidence|float) }}%</strong>
+      </div>
+      <div
+        class="progress confidence-progress"
+        role="progressbar"
+        aria-label="Model confidence"
+        aria-valuenow="{{ confidence_percent }}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <div
+          class="progress-bar {% if is_authentic %}bg-success{% else %}bg-danger{% endif %}"
+          style="width: {{ confidence_percent }}%"
+        ></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-4" aria-labelledby="visualEvidenceTitle">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-3 mb-3">
+      <div>
+        <span class="section-kicker">Visual forensic studio</span>
+        <h2 class="h3 mt-2 mb-0" id="visualEvidenceTitle">Image comparison</h2>
+      </div>
+      <button
+        type="button"
+        class="btn btn-outline-primary"
+        id="imageInspectToggle"
+        aria-pressed="false"
+      >
+        <i class="bi bi-zoom-in me-2" aria-hidden="true"></i>
+        Inspect at full resolution
+      </button>
+    </div>
+
+    <p class="small text-secondary mb-3">
+      Full-resolution inspection is synchronized; scroll within either image to pan.
+    </p>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <article class="card h-100 border-0 shadow-sm">
+          <div class="card-header bg-white border-0 pt-3 px-3">
+            <h3 class="h5 mb-0">Original Uploaded Image</h3>
+          </div>
+          <div class="card-body pt-2">
+            <div class="forensic-image-viewport">
+              <img
+                id="originalImage"
+                src="{{ result_original_url }}"
+                alt="Original ingested photograph"
+                loading="eager"
+                data-image-dimensions
+              >
+            </div>
+            <p class="image-caption mb-0 mt-3">Original Ingested Photograph</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="col-lg-6">
+        <article class="card h-100 border-0 shadow-sm">
+          <div class="card-header bg-white border-0 pt-3 px-3">
+            <h3 class="h5 mb-0">
+              Error Level Analysis
+              <button
+                type="button"
+                class="btn btn-sm btn-link p-0 align-baseline"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="ELA highlights differences between the image and a recompressed copy. Bright edges can also occur naturally."
+                aria-label="About Error Level Analysis"
+              >
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+              </button>
+            </h3>
+          </div>
+          <div class="card-body pt-2">
+            <div class="forensic-image-viewport">
+              <img
+                id="elaImage"
+                src="{{ result_ela_url }}"
+                alt="Error Level Analysis visualization of the uploaded image"
+                loading="eager"
+              >
+            </div>
+            <p class="image-caption mb-0 mt-3">
+              Error Level Analysis ({{ config.ELA_ENHANCEMENT_FACTOR|int }}x Contrast Scale)
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="mb-4" aria-labelledby="metadataTitle">
+    <h2 class="h4 mb-3" id="metadataTitle">Technical Metadata</h2>
+    <div class="row g-3">
+      <div class="col-6 col-lg-3">
+        <article class="card metadata-card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <span class="metadata-label">Input Dimensions</span>
+            <strong class="metadata-value" id="inputDimensions">
+              {% if result_dimensions %}
+              {{ result_dimensions[0] }} × {{ result_dimensions[1] }} px
+              {% else %}
+              Reading image...
+              {% endif %}
+            </strong>
+          </div>
+        </article>
+      </div>
+      <div class="col-6 col-lg-3">
+        <article class="card metadata-card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <span class="metadata-label">Model Colorspace</span>
+            <strong class="metadata-value">
+              {{ input_colorspace|default(analysis.get('input_colorspace', 'RGB'), true) }}
+            </strong>
+          </div>
+        </article>
+      </div>
+      <div class="col-6 col-lg-3">
+        <article class="card metadata-card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <span class="metadata-label">Model Architecture</span>
+            <strong class="metadata-value">
+              {% if 'mobilenet' in result_model|lower %}
+              MobileNetV2
+              {% elif 'cnn' in result_model|lower %}
+              Custom CNN
+              {% else %}
+              {{ result_model|replace('_', ' ')|title }}
+              {% endif %}
+            </strong>
+          </div>
+        </article>
+      </div>
+      <div class="col-6 col-lg-3">
+        <article class="card metadata-card h-100 border-0 shadow-sm">
+          <div class="card-body">
+            <span class="metadata-label">Analysis Latency</span>
+            <strong class="metadata-value">
+              {% if result_latency is not none %}
+              {{ "%.1f"|format(result_latency|float) }} ms
+              {% else %}
+              Not available
+              {% endif %}
+            </strong>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <aside class="alert alert-warning forensic-disclaimer mb-4" role="note">
+    <h2 class="h5 alert-heading">
+      <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+      Mandatory Forensic Disclaimer
+    </h2>
+    <p class="mb-0">{{ config.ELA_DISCLAIMER }}</p>
+  </aside>
+
+  <nav class="d-flex flex-column flex-sm-row justify-content-center gap-3" aria-label="Result actions">
+    <a
+      class="btn btn-success btn-lg"
+      href="{{ url_for('detection.download_report', session_id=result_session_id) }}"
+    >
+      <i class="bi bi-file-earmark-arrow-down me-2" aria-hidden="true"></i>
+      Download PDF Report
+    </a>
+    <a class="btn btn-outline-primary btn-lg" href="{{ url_for('main.index') }}">
+      <i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>
+      Analyze Another Image
+    </a>
+  </nav>
+</section>
+{% endblock %}

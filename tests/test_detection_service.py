@@ -118,6 +118,9 @@ def test_analyze_image_returns_prediction_paths_and_disclaimer(
     assert result["confidence"] == 94.2
     assert result["raw_probability"] == 0.942
     assert result["model_used"] == "mobilenet"
+    assert result["image_dimensions"] == (18, 12)
+    assert result["input_colorspace"] == "RGB"
+    assert result["latency_ms"] >= 0
     assert result["disclaimer"] == Config.ELA_DISCLAIMER
     assert result["timestamp"]
     assert len(predictors) == 2
