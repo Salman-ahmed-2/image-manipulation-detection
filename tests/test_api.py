@@ -73,6 +73,15 @@ def test_home_page_returns_ok(client: FlaskClient) -> None:
     response = client.get("/")
 
     assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert 'id="dropZone"' in page
+    assert 'name="image"' in page
+    assert 'name="model"' in page
+    assert f'data-max-file-size="{Config.MAX_CONTENT_LENGTH}"' in page
+    assert "MobileNetV2 (Recommended)" in page
+    assert "Custom CNN" in page
+    assert 'css/style.css' in page
+    assert 'js/main.js' in page
 
 
 def test_navigating_home_cleans_the_active_session_directory(client: FlaskClient) -> None:
@@ -98,6 +107,23 @@ def test_about_page_returns_ok(client: FlaskClient) -> None:
     response = client.get("/about")
 
     assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert "Copy-move" in page
+    assert "Splicing" in page
+    assert "False positives" in page
+    assert "False negatives" in page
+    assert Config.ELA_DISCLAIMER in page
+    assert "Member 4" in page
+
+
+def test_html_upload_error_renders_structured_error_page(client: FlaskClient) -> None:
+    """A missing upload is explained on the user-facing error page."""
+    response = client.post("/analyze", headers={"Accept": "text/html"})
+
+    page = response.get_data(as_text=True)
+    assert response.status_code == 400
+    assert "Bad Request" in page
+    assert "Return to Upload" in page
 
 
 def test_health_returns_healthy_status(client: FlaskClient) -> None:

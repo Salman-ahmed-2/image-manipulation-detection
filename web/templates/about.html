@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}About · Image Forensic Scanner{% endblock %}
+
+{% block content %}
+<header class="page-header mb-5">
+  <span class="eyebrow">Project background</span>
+  <h1 class="display-6 fw-bold mt-3">Understanding image forensics</h1>
+  <p class="lead text-secondary mb-0">
+    An educational introduction to image tampering, deep-learning screening, and the
+    limits of Error Level Analysis.
+  </p>
+</header>
+
+<section class="row g-4 mb-5" aria-labelledby="tamperingTitle">
+  <div class="col-lg-7">
+    <article class="card h-100 border-0 shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+        <span class="section-kicker">Digital image tampering</span>
+        <h2 class="h3 mt-2" id="tamperingTitle">How can an image be altered?</h2>
+        <p>
+          Digital image manipulation ranges from routine edits to changes that alter
+          the meaning of a photograph. Two common forms of tampering are copy-move
+          editing and image splicing.
+        </p>
+        <h3 class="h5 mt-4">Copy-move</h3>
+        <p>
+          In a copy-move edit, a region is copied from one part of an image and placed
+          elsewhere in that same image. The operation may conceal an object or repeat
+          a visual element; duplicated texture or compression behavior can sometimes
+          provide clues for further inspection.
+        </p>
+        <h3 class="h5 mt-4">Splicing</h3>
+        <p class="mb-0">
+          Splicing combines content from two or more images. Differences in lighting,
+          sharpness, noise, perspective, or compression history may occur at the
+          boundaries between sources, but ordinary image processing can create similar
+          inconsistencies.
+        </p>
+      </div>
+    </article>
+  </div>
+  <div class="col-lg-5">
+    <aside class="card h-100 border-0 bg-primary-subtle">
+      <div class="card-body p-4 p-lg-5">
+        <div class="method-icon text-primary"><i class="bi bi-search" aria-hidden="true"></i></div>
+        <h2 class="h4 mt-3">A preliminary screening tool</h2>
+        <p>
+          This project combines a deep-learning classifier with an ELA visualization
+          to help users decide whether an image merits additional review.
+        </p>
+        <p class="mb-0">
+          Its output is not a substitute for source verification, expert examination,
+          or a complete forensic workflow. A model score is an estimate, not a
+          certainty.
+        </p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section class="mb-5" aria-labelledby="elaTitle">
+  <div class="row justify-content-center">
+    <div class="col-xl-10">
+      <article class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          <span class="section-kicker">Reading the visualization</span>
+          <h2 class="h3 mt-2" id="elaTitle">What Error Level Analysis can—and cannot—show</h2>
+          <p>
+            ELA recompresses an image as JPEG and compares that version with the
+            original. The resulting difference image highlights areas that responded
+            differently to recompression. Images with consistent JPEG histories may
+            show relatively uniform differences, while an edited region can sometimes
+            stand out.
+          </p>
+          <div class="row g-4 mt-1">
+            <div class="col-md-6">
+              <div class="interpretation-note h-100">
+                <h3 class="h6"><i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i>False positives</h3>
+                <p class="mb-0">
+                  Bright edges, text, fine textures, and areas with strong contrast
+                  can naturally produce higher residual differences. Resizing,
+                  re-saving, or converting an image can also affect the visualization;
+                  brightness alone does not establish that an image was edited.
+                </p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="interpretation-note h-100">
+                <h3 class="h6"><i class="bi bi-eye-slash me-2" aria-hidden="true"></i>False negatives</h3>
+                <p class="mb-0">
+                  Repeated lossy compression can make different regions look more
+                  alike, and some edits may leave no clearly distinguishable ELA
+                  pattern. ELA can therefore fail to highlight genuine manipulation.
+                  PNG input is converted for analysis and may have different baseline
+                  compression behavior.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-warning mt-4 mb-0" role="note">
+            <i class="bi bi-info-circle-fill me-2" aria-hidden="true"></i>
+            {{ config.ELA_DISCLAIMER }}
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="mb-5" aria-labelledby="teamTitle">
+  <div class="text-center mb-4">
+    <span class="section-kicker">Made as a university project</span>
+    <h2 class="h3 mt-2" id="teamTitle">Four-person student team</h2>
+  </div>
+  <div class="row g-3">
+    <div class="col-sm-6 col-lg-3">
+      <article class="card team-card h-100 border-0 shadow-sm">
+        <div class="card-body p-4">
+          <span class="team-number">01</span>
+          <h3 class="h6 mt-3 mb-1">Member 1 · Lead</h3>
+          <p class="text-secondary small mb-0">Machine Learning Engineer</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <article class="card team-card h-100 border-0 shadow-sm">
+        <div class="card-body p-4">
+          <span class="team-number">02</span>
+          <h3 class="h6 mt-3 mb-1">Member 2</h3>
+          <p class="text-secondary small mb-0">Backend &amp; Systems Engineer</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <article class="card team-card h-100 border-0 shadow-sm">
+        <div class="card-body p-4">
+          <span class="team-number">03</span>
+          <h3 class="h6 mt-3 mb-1">Member 3</h3>
+          <p class="text-secondary small mb-0">Data &amp; Forensics Engineer</p>
+        </div>
+      </article>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <article class="card team-card h-100 border-0 shadow-sm">
+        <div class="card-body p-4">
+          <span class="team-number">04</span>
+          <h3 class="h6 mt-3 mb-1">Member 4</h3>
+          <p class="text-secondary small mb-0">Frontend &amp; QA Engineer</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}
