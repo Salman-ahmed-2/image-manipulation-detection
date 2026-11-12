@@ -143,3 +143,31 @@ def test_analyze_valid_synthetic_image_renders_html(client: FlaskClient) -> None
     )
 
     assert response.status_code == 200
+
+
+def test_report_download_returns_pdf_for_completed_session(client: FlaskClient) -> None:
+    """A completed synthetic-image analysis can be downloaded as a PDF report."""
+    analysis_response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(_synthetic_jpeg()), "synthetic.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+    session_id = analysis_response.get_json()["session_id"]
+
+    response = client.get(f"/report/{session_id}")
+
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.data.startswith(b"%PDF")
+    assert len(response.data) > 1000
+    assert response.headers["Content-Disposition"] == (
+        f"attachment; filename=forensic_report_{session_id}.pdf"
+    )
+
+
+def test_report_download_returns_not_found_for_unknown_session(client: FlaskClient) -> None:
+    """A session without a completed analysis cannot retrieve a report."""
+    response = client.get("/report/unknown-session")
+
+    assert response.status_code == 404
