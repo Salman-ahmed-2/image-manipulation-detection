@@ -173,6 +173,97 @@ a {
   background: #f8faff;
 }
 
+.verdict-badge {
+  padding: 0.65em 1em;
+  border-radius: 999px;
+  font-size: clamp(1.05rem, 3vw, 1.4rem);
+}
+
+.confidence-progress {
+  height: 0.85rem;
+  background: #e7edf5;
+}
+
+.forensic-image-viewport {
+  display: grid;
+  height: clamp(16rem, 45vh, 32rem);
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(45deg, #f1f4f8 25%, transparent 25%),
+    linear-gradient(-45deg, #f1f4f8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1f4f8 75%),
+    linear-gradient(-45deg, transparent 75%, #f1f4f8 75%),
+    #ffffff;
+  background-position:
+    0 0,
+    0 0.5rem,
+    0.5rem -0.5rem,
+    -0.5rem 0;
+  background-size: 1rem 1rem;
+}
+
+.forensic-image-viewport img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.result-dashboard.is-inspecting .forensic-image-viewport {
+  display: block;
+  overflow: auto;
+  cursor: grab;
+  overscroll-behavior: contain;
+}
+
+.result-dashboard.is-inspecting .forensic-image-viewport:active {
+  cursor: grabbing;
+}
+
+.result-dashboard.is-inspecting .forensic-image-viewport img {
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  object-fit: initial;
+}
+
+.image-caption {
+  color: var(--muted-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.metadata-card {
+  background: #ffffff;
+}
+
+.metadata-label,
+.metadata-value {
+  display: block;
+}
+
+.metadata-label {
+  margin-bottom: 0.4rem;
+  color: var(--muted-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.metadata-value {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.forensic-disclaimer {
+  border-left-width: 0.4rem;
+}
+
 .team-number {
   display: inline-grid;
   width: 2.75rem;

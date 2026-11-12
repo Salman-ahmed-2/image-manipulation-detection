@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Iterator
 
 import pytest
-from flask import Flask
+from flask import Flask, render_template
 from flask.testing import FlaskClient
 from PIL import Image
 
@@ -187,6 +187,57 @@ def test_analyze_valid_synthetic_image_renders_html(client: FlaskClient) -> None
     )
 
     assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert "Potentially Manipulated" in page
+    assert "64 × 64 px" in page
+    assert "RGB" in page
+    assert "MobileNetV2" in page
+    assert "Model Architecture" in page
+    assert "Analysis Latency" in page
+    assert "ms" in page
+    assert Config.ELA_DISCLAIMER in page
+    assert "Download PDF Report" in page
+
+
+@pytest.mark.parametrize(
+    ("verdict_code", "verdict_label", "badge_class"),
+    [
+        (1, "Potentially Manipulated", "text-bg-danger"),
+        (0, "Authentic Image", "text-bg-success"),
+    ],
+)
+def test_result_template_accepts_nested_mock_results(
+    app: Flask,
+    verdict_code: int,
+    verdict_label: str,
+    badge_class: str,
+) -> None:
+    """Render both verdict states with the documented nested result shape."""
+    with app.test_request_context():
+        page = render_template(
+            "result.html",
+            results={
+                "session_id": "test-session",
+                "verdict_label": verdict_label,
+                "verdict_code": verdict_code,
+                "confidence": 93.4,
+                "model_used": "mobilenet_v2",
+                "original_image_path": "/static/temp/test/orig.jpg",
+                "ela_image_path": "/static/temp/test/ela.png",
+                "disclaimer": "ELA is an investigative aid.",
+            },
+        )
+
+    assert verdict_label in page
+    assert "93.4%" in page
+    assert badge_class in page
+    assert "/report/test-session" in page
+    assert "/static/temp/test/orig.jpg" in page
+    assert "/static/temp/test/ela.png" in page
+    assert Config.ELA_DISCLAIMER in page
+    assert 'id="imageInspectToggle"' in page
+    assert 'class="col-lg-6"' in page
+    assert "Analyze Another Image" in page
 
 
 def test_report_download_returns_pdf_for_completed_session(client: FlaskClient) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Dict, Optional
 
 from config import Config
@@ -54,6 +55,7 @@ class DetectionService:
             ModelInferenceError: If model inference fails.
             OSError: If an image artifact cannot be saved.
         """
+        started_at = perf_counter()
         selected_model = (model_choice or self.model_name).lower()
         supported_models = {
             choice for choice in Config.EVALUATION_MODEL_CHOICES if choice != "both"
@@ -101,6 +103,9 @@ class DetectionService:
             "confidence": prediction["confidence"],
             "raw_probability": prediction["raw_probability"],
             "model_used": prediction["model_used"],
+            "image_dimensions": image.size,
+            "input_colorspace": image.mode,
+            "latency_ms": (perf_counter() - started_at) * 1000,
             "original_image_path": str(original_path),
             "ela_image_path": str(ela_path),
             "original_filename": original_filename,
