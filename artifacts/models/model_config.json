@@ -1,7 +1,11 @@
 {
   "model_name": "mobilenet_classifier",
   "architecture": "MobileNetV2",
-  "input_shape": [224, 224, 3],
+  "input_shape": [
+    224,
+    224,
+    3
+  ],
   "normalization_mode": "mobilenet",
   "normalization_range": "[-1, 1]",
   "num_classes": 2,
@@ -9,9 +13,22 @@
   "classification_threshold": 0.5,
   "pretrained_weights": "imagenet",
   "fine_tune_layers": 30,
-  "head_units": [256, 128],
-  "head_dropout_rates": [0.4, 0.3],
+  "head_units": [
+    256,
+    128
+  ],
+  "head_dropout_rates": [
+    0.4,
+    0.3
+  ],
+  "initial_learning_rate": 0.001,
+  "fine_tune_learning_rate": 1e-05,
+  "warmup_epochs_configured": 15,
+  "finetune_epochs_configured": 25,
   "training_dataset": "CASIA v1.0 + v2.0",
+  "model_file": "mobilenetv2.keras",
+  "model_size_mb": 24.98,
   "version": "1.0.0",
-  "status": "untrained — replace after Colab training"
+  "trained_at": "2026-11-15T13:58:56.600691+00:00",
+  "tensorflow_version": "2.22.0-rc0"
 }

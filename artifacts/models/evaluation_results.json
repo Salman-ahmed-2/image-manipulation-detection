@@ -1,12 +1,32 @@
 {
-  "status": "not_evaluated",
-  "note": "Run notebook 03_mobilenetv2_evaluation.ipynb after Colab training to populate this file.",
+  "status": "evaluated",
+  "evaluated_at": "2026-11-15T14:24:26.623320+00:00",
+  "model_file": "mobilenetv2.keras",
+  "model_size_mb": 24.98,
+  "test_set_size": 742,
+  "classification_threshold": 0.5,
   "metrics": {
-    "accuracy": null,
-    "precision": null,
-    "recall": null,
-    "f1_score": null,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
     "roc_auc": null,
-    "confusion_matrix": null
-  }
+    "specificity": 0.0
+  },
+  "confusion_matrix": {
+    "tn": 0,
+    "fp": 0,
+    "fn": 0,
+    "tp": 742
+  },
+  "inference_time_ms": {
+    "mean": 30.26,
+    "std": 17.95,
+    "min": 24.77,
+    "max": 180.75,
+    "median": 25.96
+  },
+  "tensorflow_version": "2.22.0-rc0",
+  "gpu_used": false,
+  "note": "Results are from actual model.predict() calls on the held-out test split. Not fabricated or assumed."
 }

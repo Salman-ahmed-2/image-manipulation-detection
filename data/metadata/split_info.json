@@ -1,0 +1,13 @@
+{
+  "total_images": 5123,
+  "split_counts": {
+    "train": 3625,
+    "validation": 756,
+    "test": 742
+  },
+  "train_ratio": 0.7,
+  "val_ratio": 0.15,
+  "test_ratio": 0.15,
+  "random_seed": 42,
+  "leakage_verified": true
+}

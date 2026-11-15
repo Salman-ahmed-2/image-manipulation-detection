@@ -7,6 +7,7 @@ are missing, input tensor dimension validation, and calibrated confidence calcul
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 import numpy as np
 import pytest
@@ -43,8 +44,11 @@ def clean_model_cache():
     ModelLoader.clear_cache()
 
 
-def test_model_loader_graceful_missing_files(caplog):
+def test_model_loader_graceful_missing_files(caplog, monkeypatch):
     """Test model loader registers mock fallback when weights are missing."""
+    monkeypatch.setattr(Config, "MODEL_PATH_CNN", Path("/nonexistent/cnn.keras"))
+    monkeypatch.setattr(Config, "MODEL_PATH_MOBILENET", Path("/nonexistent/mobilenet.keras"))
+    monkeypatch.setattr(Config, "MODEL_PATH_MOBILENET_V2", Path("/nonexistent/mobilenetv2.keras"))
     with caplog.at_level(logging.WARNING):
         ModelLoader.load_all_models()
 

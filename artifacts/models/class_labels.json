@@ -2,5 +2,5 @@
   "0": "Authentic",
   "1": "Potentially Manipulated",
   "threshold": 0.5,
-  "note": "Sigmoid output >= 0.5 is classified as Manipulated"
+  "note": "Sigmoid output >= threshold is classified as label 1 (Manipulated)"
 }
