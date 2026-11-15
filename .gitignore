@@ -1,0 +1,211 @@
+# ============================================================
+# Image Manipulation Detection — .gitignore
+# ============================================================
+# Keep source code, docs, configs, and .gitkeep placeholders.
+# Exclude datasets, trained models, build artefacts, and
+# environment files that must NOT be committed.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# Python cache & compiled bytecode
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+scripts/__pycache__/
+
+
+# ------------------------------------------------------------
+# Virtual environments
+# ------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.env
+# Keep the example file so teammates know what vars are needed
+!.env.example
+
+
+# ------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------
+*.log
+logs/
+
+
+# ------------------------------------------------------------
+# OS artefacts
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ------------------------------------------------------------
+# Jupyter Notebook checkpoints
+# ------------------------------------------------------------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+
+# ------------------------------------------------------------
+# data/raw/  — raw dataset images are large and must NOT be
+#              committed; only the placeholder files are kept.
+# ------------------------------------------------------------
+data/raw/**
+!data/raw/
+!data/raw/casia_v1/
+!data/raw/casia_v1/.gitkeep
+!data/raw/casia_v2/
+!data/raw/casia_v2/.gitkeep
+
+# Common image formats found in CASIA raw dirs
+*.tif
+*.tiff
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.gif
+*.webp
+
+
+# ------------------------------------------------------------
+# data/processed/  — resized/normalised images written by
+#                    scripts/prepare_dataset.py
+# ------------------------------------------------------------
+data/processed/**
+!data/processed/
+!data/processed/authentic/
+!data/processed/authentic/.gitkeep
+!data/processed/manipulated/
+!data/processed/manipulated/.gitkeep
+
+
+# ------------------------------------------------------------
+# data/splits/  — per-split image symlinks / copies
+# ------------------------------------------------------------
+data/splits/train/**
+!data/splits/train/
+!data/splits/train/.gitkeep
+
+data/splits/validation/**
+!data/splits/validation/
+!data/splits/validation/.gitkeep
+
+data/splits/test/**
+!data/splits/test/
+!data/splits/test/.gitkeep
+
+
+# ------------------------------------------------------------
+# data/metadata/  — CSV / JSON label files ARE committed.
+#                   Nothing to ignore here; listed explicitly
+#                   so future contributors know the intent.
+# ------------------------------------------------------------
+# data/metadata/ contents are intentionally tracked.
+
+
+# ------------------------------------------------------------
+# data/annotations/  — mask images can be large; keep only
+#                      the placeholder files.
+# ------------------------------------------------------------
+data/annotations/casia_v1/**
+!data/annotations/casia_v1/
+!data/annotations/casia_v1/.gitkeep
+
+data/annotations/casia_v2/**
+!data/annotations/casia_v2/
+!data/annotations/casia_v2/.gitkeep
+
+
+# ------------------------------------------------------------
+# artifacts/models/  — trained model weights and checkpoints
+#                      are large binary files; keep the
+#                      config JSON stubs that are committed.
+# ------------------------------------------------------------
+artifacts/models/*.keras
+artifacts/models/*.h5
+artifacts/models/*checkpoint*
+artifacts/models/mobilenet_model*
+artifacts/models/cnn_model*
+
+# Keep the config/metadata stubs
+!artifacts/models/model_config.json
+!artifacts/models/class_labels.json
+!artifacts/models/preprocessing_config.json
+!artifacts/models/evaluation_results.json
+!artifacts/models/.gitkeep
+
+
+# ------------------------------------------------------------
+# artifacts/plots/  — large PNGs generated during training
+# ------------------------------------------------------------
+artifacts/plots/**
+!artifacts/plots/
+!artifacts/plots/*.md
+
+
+# ------------------------------------------------------------
+# artifacts/reports/  — generated PDF/HTML reports
+# ------------------------------------------------------------
+artifacts/reports/**
+!artifacts/reports/
+!artifacts/reports/*.md
+
+
+# ------------------------------------------------------------
+# artifacts/predictions/  — per-request prediction outputs
+# ------------------------------------------------------------
+artifacts/predictions/**
+!artifacts/predictions/
+!artifacts/predictions/.gitkeep
+
+
+# ------------------------------------------------------------
+# Temporary upload / session storage
+# ------------------------------------------------------------
+temp/
+tmp/
+uploads/
+
+
+# ------------------------------------------------------------
+# Build / packaging artefacts
+# ------------------------------------------------------------
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+
+# ------------------------------------------------------------
+# Testing & coverage
+# ------------------------------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+
+# ------------------------------------------------------------
+# Editor / IDE files
+# ------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+
+# ------------------------------------------------------------
+# Miscellaneous
+# ------------------------------------------------------------
+*.bak
+*.orig
+*.rej

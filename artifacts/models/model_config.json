@@ -1,0 +1,17 @@
+{
+  "model_name": "mobilenet_classifier",
+  "architecture": "MobileNetV2",
+  "input_shape": [224, 224, 3],
+  "normalization_mode": "mobilenet",
+  "normalization_range": "[-1, 1]",
+  "num_classes": 2,
+  "output_activation": "sigmoid",
+  "classification_threshold": 0.5,
+  "pretrained_weights": "imagenet",
+  "fine_tune_layers": 30,
+  "head_units": [256, 128],
+  "head_dropout_rates": [0.4, 0.3],
+  "training_dataset": "CASIA v1.0 + v2.0",
+  "version": "1.0.0",
+  "status": "untrained — replace after Colab training"
+}

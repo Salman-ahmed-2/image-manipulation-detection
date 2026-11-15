@@ -74,7 +74,7 @@ class DetectionService:
                     target_size=Config.TARGET_SIZE,
                     mode=Config.MOBILENET_NORMALIZATION_MODE,
                 )
-                if selected_model == Config.MOBILENET_NORMALIZATION_MODE
+                if selected_model == "mobilenet"
                 else prepare_tensor(image, target_size=Config.TARGET_SIZE)
             )
 

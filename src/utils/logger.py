@@ -37,4 +37,15 @@ def get_logger(name: str) -> logging.Logger:
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
+        if getattr(Config, "ENABLE_FILE_LOGGING", False) and getattr(Config, "LOG_FILE", None):
+            try:
+                log_file_path = Config.LOG_FILE
+                log_file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_handler = logging.FileHandler(str(log_file_path), encoding="utf-8")
+                file_handler.setLevel(log_level)
+                file_handler.setFormatter(formatter)
+                logger.addHandler(file_handler)
+            except Exception:
+                pass
+
     return logger

@@ -1,0 +1,12 @@
+{
+  "status": "not_evaluated",
+  "note": "Run notebook 03_mobilenetv2_evaluation.ipynb after Colab training to populate this file.",
+  "metrics": {
+    "accuracy": null,
+    "precision": null,
+    "recall": null,
+    "f1_score": null,
+    "roc_auc": null,
+    "confusion_matrix": null
+  }
+}
