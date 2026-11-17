@@ -148,6 +148,9 @@ artifacts/plots/**
 !artifacts/plots/
 !artifacts/plots/*.md
 
+# CASIA upload package is a generated multi-gigabyte archive; keep it local.
+artifacts/datasets/*.zip
+
 
 # ------------------------------------------------------------
 # artifacts/reports/  — generated PDF/HTML reports
