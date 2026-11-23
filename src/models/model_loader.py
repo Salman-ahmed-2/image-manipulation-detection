@@ -65,17 +65,39 @@ class ModelLoader:
     _registry: Dict[str, Any] = {}
 
     @classmethod
+    def _resolve_mobilenet_path(cls) -> Path:
+        """Return the best available MobileNetV2 model path.
+
+        Prefers ``mobilenetv2.keras`` (Colab export convention) if present in
+        ``Config.MODEL_DIR``, falling back to the legacy ``mobilenet_model.keras``
+        filename so that existing local deployments continue to work without
+        renaming files.
+
+        Returns:
+            Path: Resolved path to the MobileNetV2 weights file.
+        """
+        if Config.MODEL_PATH_MOBILENET_V2.exists():
+            logger.debug(
+                "Resolved MobileNet path to Colab export: %s",
+                Config.MODEL_PATH_MOBILENET_V2,
+            )
+            return Config.MODEL_PATH_MOBILENET_V2
+        return Config.MODEL_PATH_MOBILENET
+
+    @classmethod
     def load_all_models(cls) -> None:
         """Check Config.MODEL_DIR and load all configured models into memory.
 
-        Scans for cnn_model.keras and mobilenet_model.keras. If present, loads
-        and executes a dummy warmup pass using tf.zeros((1, 224, 224, 3)) to build
-        the computation graph. If absent or if TensorFlow is unavailable, logs
-        a warning and registers a lightweight mock fallback model.
+        Scans for cnn_model.keras and, for MobileNetV2, prefers mobilenetv2.keras
+        (Colab export convention) over the legacy mobilenet_model.keras filename.
+        If present, loads and executes a dummy warmup pass using
+        tf.zeros((1, 224, 224, 3)) to build the computation graph.
+        If absent or if TensorFlow is unavailable, logs a warning and registers a
+        lightweight mock fallback model.
         """
         models_to_load = {
             "cnn": Config.MODEL_PATH_CNN,
-            "mobilenet": Config.MODEL_PATH_MOBILENET,
+            "mobilenet": cls._resolve_mobilenet_path(),
         }
 
         # Attempt to import TensorFlow lazily

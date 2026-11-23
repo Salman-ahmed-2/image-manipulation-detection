@@ -1,0 +1,11 @@
+{
+  "target_size": [
+    224,
+    224
+  ],
+  "normalization_mode": "mobilenet",
+  "normalization_formula": "pixel / 127.5 - 1.0",
+  "color_mode": "RGB",
+  "input_dtype": "float32",
+  "note": "Must match src/preprocessing/image_normalizer.py normalize_image(mode='mobilenet')"
+}

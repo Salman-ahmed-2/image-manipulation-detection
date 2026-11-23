@@ -147,6 +147,9 @@ class Config:
     ACTIVE_MODEL: str = os.getenv("ACTIVE_MODEL", "mobilenet").lower()
     MODEL_PATH_CNN: Path = MODEL_DIR / "cnn_model.keras"
     MODEL_PATH_MOBILENET: Path = MODEL_DIR / "mobilenet_model.keras"
+    # Preferred export filename from Colab training (takes precedence over MODEL_PATH_MOBILENET)
+    MODEL_PATH_MOBILENET_V2: Path = MODEL_DIR / "mobilenetv2.keras"
+    MODEL_PATH_MOBILENET_V2: Path = MODEL_DIR / "mobilenetv2.keras"
 
     # Class definitions
     CLASS_LABELS: dict[int, str] = {

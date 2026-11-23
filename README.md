@@ -71,20 +71,270 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env to set SECRET_KEY, model paths, etc.
 
-# 5. (Optional) Download and prepare the CASIA dataset
-#    See docs/dataset/DATASET_OVERVIEW.md for dataset access instructions
-python scripts/prepare_dataset.py
+# 5. Train the model in Google Colab (recommended — no local GPU required)
+#    See ## Google Colab Training Workflow below for step-by-step instructions.
+#    After training, download mobilenetv2.keras and place it in artifacts/models/
 
-# 6. (Optional) Train models
-#    Pre-trained weights should be placed in artifacts/models/
-python scripts/train.py --model cnn
-python scripts/train.py --model mobilenet
-
-# 7. Launch the development server
+# 6. Launch the development server
 python run.py
 ```
 
+> **Note:** No model training happens locally. The Flask app loads the pre-trained
+> `artifacts/models/mobilenetv2.keras` file produced by Colab and performs
+> MobileNetV2 inference only. See [Google Colab Training Workflow](#google-colab-training-workflow)
+> for instructions on obtaining the trained model.
+
 The application will be available at **http://127.0.0.1:5000** by default.
+
+---
+
+## Google Colab Training Workflow
+
+Training MobileNetV2 on the full CASIA dataset requires a GPU and several hours of compute time. The recommended approach is to use **Google Colab's free or Pro GPU runtime** via three purpose-built notebooks. No local GPU is needed.
+
+### Overview of the 3-Notebook Pipeline
+
+| Notebook | File | Purpose |
+|---|---|---|
+| **1** | `notebooks/colab/01_dataset_preparation.ipynb` | Scan CASIA images, build metadata CSV, create train/val/test splits |
+| **2** | `notebooks/colab/02_mobilenetv2_training.ipynb` | Train MobileNetV2 (two-phase: head then fine-tuning), save checkpoints |
+| **3** | `notebooks/colab/03_mobilenetv2_evaluation.ipynb` | Load model, run evaluation on test split, export metrics JSON |
+
+### Opening Notebooks in Colab
+
+Click a badge below to open the notebook directly in Google Colab:
+
+| Notebook | Open in Colab |
+|---|---|
+| Dataset Preparation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/<your-org>/image-manipulation-detection/blob/main/notebooks/colab/01_dataset_preparation.ipynb) |
+| MobileNetV2 Training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/<your-org>/image-manipulation-detection/blob/main/notebooks/colab/02_mobilenetv2_training.ipynb) |
+| Model Evaluation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/<your-org>/image-manipulation-detection/blob/main/notebooks/colab/03_mobilenetv2_evaluation.ipynb) |
+
+> Replace `<your-org>` with your actual GitHub organisation or username once the repo is public.
+
+### Providing the CASIA Dataset to Colab
+
+Colab sessions do not have access to your local disk. Use one of the three methods below to supply the CASIA images:
+
+**Method 1 — Colab file upload widget (small batches)**
+```python
+from google.colab import files
+uploaded = files.upload()   # select your zip archive in the dialog
+```
+Best for CASIA v1 (~100 MB). Can be slow for CASIA v2 (~2 GB).
+
+**Method 2 — Kaggle API (recommended for CASIA v2)**
+```python
+# In the notebook's setup cell:
+from google.colab import userdata
+import os
+os.environ["KAGGLE_USERNAME"] = userdata.get("KAGGLE_USERNAME")
+os.environ["KAGGLE_KEY"]      = userdata.get("KAGGLE_KEY")
+!kaggle datasets download -d <dataset-slug> -p /content/data/
+!unzip /content/data/<dataset>.zip -d /content/data/
+```
+Store your Kaggle API credentials in Colab Secrets (🔑 icon in the left sidebar).
+
+**Method 3 — Manual zip upload via Google Drive**
+1. Upload your CASIA zip to Google Drive.
+2. Mount Drive in Colab: `from google.colab import drive; drive.mount('/content/drive')`
+3. Copy or unzip directly from `/content/drive/MyDrive/`.
+
+### Step-by-Step Training Instructions
+
+**Step 1 — Run Notebook 1 (Dataset Preparation)**
+1. Open `01_dataset_preparation.ipynb` in Colab.
+2. Provide the CASIA dataset using one of the methods above.
+3. Run all cells. The notebook produces:
+   - `data/metadata/dataset_inventory.csv`
+   - `data/splits/dataset_split.csv` (train / val / test assignment for every image)
+4. Download `dataset_split.csv` to your local `data/splits/` folder and commit it so all team members use identical splits.
+
+**Step 2 — Run Notebook 2 (MobileNetV2 Training)**
+1. Switch to a **GPU runtime**: `Runtime → Change runtime type → T4 GPU`.
+2. Open `02_mobilenetv2_training.ipynb`.
+3. Upload or link the CASIA dataset and the `dataset_split.csv` from Step 1.
+4. Run all cells. Training proceeds in two phases:
+   - **Phase 1:** Only the custom classification head is trained (base frozen).
+   - **Phase 2:** The top 30 layers of MobileNetV2 are unfrozen and fine-tuned at a lower learning rate.
+5. Checkpoints are saved automatically to `/content/checkpoints/` after each epoch.
+6. At the end of training, the model is saved as `/content/mobilenetv2.keras`.
+
+**Step 3 — Run Notebook 3 (Evaluation)**
+1. Open `03_mobilenetv2_evaluation.ipynb`.
+2. Run all cells. The notebook loads `mobilenetv2.keras`, runs inference on the test split, and writes `evaluation_results.json`.
+
+### Downloading the Trained Model and Placing it Locally
+
+```python
+# At the end of Notebook 2, run:
+from google.colab import files
+files.download('/content/mobilenetv2.keras')
+```
+
+Place the downloaded file in your local project:
+
+```bash
+cp ~/Downloads/mobilenetv2.keras artifacts/models/mobilenetv2.keras
+```
+
+The Flask app will automatically load this file on startup. See [Model Export and Deployment](#model-export-and-deployment) for full details.
+
+---
+
+## Three-Person Collaboration Workflow
+
+### Team Roles and Responsibilities
+
+| Member | Role | Primary Responsibilities |
+|---|---|---|
+| **Member 1** | Training Manager | Manage Colab sessions, run Notebooks 1–3, save and version checkpoints, distribute trained `.keras` files to the team |
+| **Member 2** | Dataset Manager | Validate CASIA download, verify image counts and labels, produce and maintain `dataset_split.csv`, update `docs/dataset/` |
+| **Member 3** | Evaluation & Integration | Load trained model into Flask, wire up `model_loader.py`, write integration tests, run `pytest`, update deployment docs |
+
+### Git Workflow
+
+**Branch naming convention:**
+
+```
+feature/<short-description>   # New features or capabilities
+fix/<short-description>        # Bug fixes
+docs/<short-description>       # Documentation only
+test/<short-description>       # Test additions or fixes
+```
+
+**Pull request policy:**
+- **Never commit directly to `main`.** All changes go through a pull request.
+- Every PR requires **at least 1 reviewer** approval before merging.
+- Delete the feature branch after merging.
+- Run `pytest tests/ -v` locally and confirm all tests pass before opening a PR.
+
+**Typical workflow:**
+```bash
+git checkout main && git pull
+git checkout -b feature/integrate-mobilenet
+# ... make changes ...
+pytest tests/ -v
+git add -p
+git commit -m "feat(models): integrate mobilenetv2 model loader"
+git push origin feature/integrate-mobilenet
+# Open PR on GitHub → request review from a teammate
+```
+
+### Shared Dataset Split Requirement
+
+All three team members **must use the same `data/splits/dataset_split.csv`** so that evaluation results are reproducible and comparable. The process:
+
+1. Member 2 (Dataset Manager) generates the split using Notebook 1 and commits `dataset_split.csv` to `data/splits/` on `main`.
+2. All other members pull `main` before training or evaluation.
+3. **Never regenerate the split** after it has been committed — doing so invalidates all previously measured metrics.
+
+### Training Session Protocol
+
+- Only **one team member** should run a full training session at a time to avoid producing conflicting model files.
+- When starting a training run, post a message in the team chat: *"Starting training run — ETA ~2 hours."*
+- When done, share the `.keras` file (e.g. via Google Drive or as a GitHub Release asset) and announce the completion.
+- Member 1 is responsible for maintaining `artifacts/models/evaluation_results.json` after each run.
+
+---
+
+## Model Export and Deployment
+
+### After Colab Training
+
+Once Notebook 2 completes, the following files are available in Colab's `/content/` directory:
+
+| File | Purpose |
+|---|---|
+| `mobilenetv2.keras` | Trained model weights and architecture |
+| `evaluation_results.json` | Test-set metrics produced by Notebook 3 |
+
+The configuration files below are already committed to the repository and do **not** need to be downloaded from Colab:
+
+| File | Location |
+|---|---|
+| `model_config.json` | `artifacts/models/model_config.json` |
+| `class_labels.json` | `artifacts/models/class_labels.json` |
+| `preprocessing_config.json` | `artifacts/models/preprocessing_config.json` |
+
+### Downloading from Colab
+
+```python
+from google.colab import files
+files.download('/content/mobilenetv2.keras')
+files.download('/content/evaluation_results.json')
+```
+
+### Placing Files in the Local Project
+
+```bash
+# Place the model
+cp ~/Downloads/mobilenetv2.keras artifacts/models/mobilenetv2.keras
+
+# Update evaluation results
+cp ~/Downloads/evaluation_results.json artifacts/models/evaluation_results.json
+```
+
+### Verifying the Model Loads Correctly
+
+```bash
+# Activate your virtual environment first
+source .venv/bin/activate
+
+python -c "
+from src.models.model_loader import ModelLoader
+loader = ModelLoader()
+model = loader.load_mobilenet()
+print('Model loaded. Input shape:', model.input_shape)
+print('Output shape:', model.output_shape)
+"
+```
+
+If the model loads without errors, the deployment is complete.
+
+### Starting the Flask Application
+
+```bash
+python run.py
+# Visit http://127.0.0.1:5000
+```
+
+The app will automatically use `artifacts/models/mobilenetv2.keras` for inference. No retraining occurs locally.
+
+---
+
+## Checkpoint Recovery (Colab)
+
+Colab free-tier sessions disconnect after approximately **12 hours** of inactivity or runtime. Notebook 2 saves a checkpoint after every epoch so that training can be resumed without starting over.
+
+### Checkpoint Location
+
+During training, checkpoints are saved to:
+```
+/content/checkpoints/checkpoint_epoch_{N:02d}_val{val_accuracy:.4f}.keras
+```
+
+The best checkpoint (highest validation accuracy) is also saved as:
+```
+/content/checkpoints/best_model.keras
+```
+
+### How to Resume Training
+
+1. Reconnect to Colab and re-open `02_mobilenetv2_training.ipynb`.
+2. Re-run the **setup cells** (install dependencies, mount Drive / re-upload data).
+3. Scroll to the **"Resume from Checkpoint"** cell and set the path:
+   ```python
+   RESUME_FROM_CHECKPOINT = "/content/checkpoints/best_model.keras"
+   ```
+4. Run the resume cell — it loads weights from the checkpoint and continues training from the next epoch.
+
+> **Recommendation:** Save your checkpoints to Google Drive during long training runs so they survive a session disconnect:
+> ```python
+> import shutil
+> shutil.copy('/content/checkpoints/best_model.keras',
+>             '/content/drive/MyDrive/image-detection-checkpoints/best_model.keras')
+> ```
 
 ---
 
@@ -269,6 +519,8 @@ For full dataset details, access instructions, and license information, see **[d
 | [Testing Strategy](docs/TESTING_STRATEGY.md) | Test plans and coverage targets |
 | [Known Limitations](docs/KNOWN_LIMITATIONS.md) | Current limitations and disclaimers |
 | [Dataset Overview](docs/dataset/DATASET_OVERVIEW.md) | CASIA dataset details and access |
+| [Colab Training Guide](docs/colab/COLAB_GUIDE.md) | Step-by-step Google Colab training instructions |
+| [Collaboration Guide](docs/collaboration/COLLABORATION_GUIDE.md) | Three-person team workflow and Git conventions |
 
 ---
 

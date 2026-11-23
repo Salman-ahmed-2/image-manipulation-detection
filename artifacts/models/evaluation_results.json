@@ -1,0 +1,34 @@
+{
+  "status": "evaluated",
+  "evaluated_at": "2026-11-17T08:59:51.761295+00:00",
+  "model_file": "mobilenetv2.keras",
+  "model_size_mb": 24.98,
+  "test_set_size": 2154,
+  "classification_threshold": 0.5,
+  "metrics": {
+    "accuracy": 0.6732,
+    "precision": 0.62,
+    "recall": 0.6106,
+    "f1_score": 0.6153,
+    "roc_auc": 0.7217,
+    "specificity": 0.72
+  },
+  "confusion_matrix": {
+    "tn": 887,
+    "fp": 345,
+    "fn": 359,
+    "tp": 563
+  },
+  "inference_time_ms": {
+    "mean": 5.04,
+    "std": 3.29,
+    "min": 4.23,
+    "max": 39.75,
+    "median": 4.39
+  },
+  "tensorflow_version": "2.22.0-rc1",
+  "gpu_used": false,
+  "note": "Results are from actual model.predict() calls on the held-out test split. Not fabricated or assumed.",
+  "total_evaluations": 1,
+  "evaluation_history": []
+}
