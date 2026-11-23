@@ -29,6 +29,8 @@
   "model_file": "mobilenetv2.keras",
   "model_size_mb": 24.98,
   "version": "1.0.0",
-  "trained_at": "2026-11-15T13:58:56.600691+00:00",
-  "tensorflow_version": "2.22.0-rc0"
+  "trained_at": "2026-11-17T08:59:06.261958+00:00",
+  "tensorflow_version": "2.22.0-rc1",
+  "total_training_runs": 1,
+  "training_runs_history": []
 }

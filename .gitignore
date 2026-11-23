@@ -133,7 +133,8 @@ artifacts/models/*checkpoint*
 artifacts/models/mobilenet_model*
 artifacts/models/cnn_model*
 
-# Keep the config/metadata stubs
+# Keep the config/metadata stubs and shared trained model
+!artifacts/models/mobilenetv2.keras
 !artifacts/models/model_config.json
 !artifacts/models/class_labels.json
 !artifacts/models/preprocessing_config.json
@@ -149,6 +150,7 @@ artifacts/plots/**
 !artifacts/plots/*.md
 
 # CASIA upload package is a generated multi-gigabyte archive; keep it local.
+*.zip
 artifacts/datasets/*.zip
 
 

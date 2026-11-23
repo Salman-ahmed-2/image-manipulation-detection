@@ -30,6 +30,12 @@ def _load_image_array(image_path: str | Path) -> np.ndarray:
     resolved_path = Path(image_path)
     if not resolved_path.is_absolute():
         resolved_path = Config.BASE_DIR / resolved_path
+    elif not resolved_path.is_file():
+        path_str = str(image_path)
+        if "data/raw" in path_str:
+            candidate = Config.BASE_DIR / path_str[path_str.index("data/raw"):]
+            if candidate.is_file():
+                resolved_path = candidate
 
     image = load_image(resolved_path)
     resized = resize_image(image, target_size=Config.TARGET_SIZE)
