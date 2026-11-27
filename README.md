@@ -93,6 +93,12 @@ CIFAKE test split. It reports accuracy and other metrics without retraining.
 These results measure performance on CIFAKE only and do not establish real-world
 AI-image detection accuracy.
 
+To further fine-tune both existing classifiers on Kaggle's real/AI human-face
+images, use [`notebooks/colab/07_finetune_cifake_models_on_faces.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_faces.ipynb).
+It keeps validation and test images separate and writes new checkpoints without
+overwriting the current app models. Fine-tuning on faces can reduce performance
+on non-face images.
+
 ---
 
 ## Legacy CASIA MobileNetV2 Training Notes
