@@ -39,9 +39,31 @@ def app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Flask]:
     monkeypatch.setattr(Config, "UPLOAD_FOLDER", upload_folder)
 
     def register_test_models() -> None:
-        """Register lightweight models without loading trained weights."""
-        for model_name in ("cnn", "mobilenet"):
-            ModelLoader.register_model(model_name, MockFallbackModel(model_name))
+        """Register a lightweight callable model without loading trained weights."""
+
+        class _TestCIFAKEModel:
+            """Deterministic 32x32 test model stub."""
+
+            def predict(self, tensor, verbose: int = 0):  # noqa: ANN001, ANN202
+                import numpy as np
+
+                del verbose
+                batch_size = tensor.shape[0] if getattr(tensor, "ndim", 0) == 4 else 1
+                return np.full((batch_size, 1), 0.25, dtype=np.float32)
+
+        ModelLoader.register_model(Config.CIFAKE_MODEL_NAME, _TestCIFAKEModel())
+
+        class _TestHuggingFaceModel:
+            """Deterministic image-native test model stub."""
+
+            def predict_image(self, image):  # noqa: ANN001, ANN201
+                del image
+                return 0.75
+
+        ModelLoader.register_model(
+            Config.HUGGINGFACE_MODEL_NAME,
+            _TestHuggingFaceModel(),
+        )
 
     monkeypatch.setattr(ModelLoader, "load_all_models", register_test_models)
     ModelLoader.clear_cache()
@@ -127,9 +149,9 @@ def mock_predictor(monkeypatch: pytest.MonkeyPatch) -> Mock:
         return_value={
             "raw_probability": 0.934,
             "verdict_code": 1,
-            "verdict_label": "Potentially Manipulated",
+            "verdict_label": "AI-generated",
             "confidence": 93.4,
-            "model_used": Config.ACTIVE_MODEL,
+            "model_used": Config.CIFAKE_MODEL_NAME,
         }
     )
     monkeypatch.setattr(Predictor, "predict", predictor)

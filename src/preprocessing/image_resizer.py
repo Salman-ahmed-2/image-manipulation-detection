@@ -13,14 +13,16 @@ def resize_image(
     image: Image.Image,
     target_size: tuple[int, int] = Config.TARGET_SIZE,
     keep_aspect_ratio: bool = False,
+    resample: Image.Resampling = Image.Resampling.BICUBIC,
 ) -> Image.Image:
-    """Resize an image using bicubic interpolation, optionally padding to fit.
+    """Resize an image using the requested resampling filter, optionally padding to fit.
 
     Args:
         image: Source Pillow image.
         target_size: Target width and height. Defaults to ``Config.TARGET_SIZE``.
         keep_aspect_ratio: If true, preserve the source ratio and center-pad the
             resized image with the configured padding color.
+        resample: Pillow resampling filter. Defaults to ``Image.Resampling.BICUBIC``.
 
     Returns:
         An RGB image with dimensions ``target_size``.
@@ -40,13 +42,13 @@ def resize_image(
     if not keep_aspect_ratio:
         return rgb_image.resize(
             (width, height),
-            resample=Image.Resampling.BICUBIC,
+            resample=resample,
         )
 
     resized_image = ImageOps.contain(
         rgb_image,
         (width, height),
-        method=Image.Resampling.BICUBIC,
+        method=resample,
     )
     canvas = Image.new("RGB", (width, height), color="black")
     left = (width - resized_image.width) // 2

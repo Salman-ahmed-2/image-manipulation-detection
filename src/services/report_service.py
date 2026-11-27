@@ -1,11 +1,11 @@
-"""Compile preliminary forensic analysis results into an in-memory PDF report."""
+"""Compile CIFAKE classification results into an in-memory PDF report."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from math import isfinite
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
 from fpdf import FPDF
@@ -21,51 +21,57 @@ logger = get_logger(__name__)
 
 
 class ReportService:
-    """Generate downloadable forensic screening reports."""
+    """Generate downloadable CIFAKE classification summary reports."""
 
     @staticmethod
     def generate_pdf_report(
         results_data: Dict[str, Any],
         original_image_path: Path,
-        ela_image_path: Path,
+        ela_image_path: Optional[Path] = None,
     ) -> bytes:
         """Compile an analysis session into an in-memory PDF document.
 
         Args:
             results_data: Analysis metadata dictionary from DetectionService.
             original_image_path: Filesystem path to the ingested original photo.
-            ela_image_path: Filesystem path to the generated ELA visualization map.
+            ela_image_path: Unused legacy parameter kept for signature compatibility.
 
         Returns:
             Binary bytes representing the compiled PDF document.
 
         Raises:
-            ReportGenerationError: If report metadata, images, or PDF generation fail.
+            ReportGenerationError: If report metadata, image, or PDF generation fail.
         """
+        del ela_image_path
         try:
             verdict = str(results_data["verdict_label"])
-            confidence = float(results_data["confidence"])
-            supported_verdicts = (
-                Config.AUTHENTIC_LABEL_NAME,
-                Config.CLASS_LABELS[Config.MANIPULATED_LABEL],
+            raw_probability = float(
+                results_data.get("raw_probability", 0.0)
             )
+            supported_verdicts = tuple(Config.CIFAKE_CLASS_LABELS.values())
             if verdict not in supported_verdicts:
                 raise ValueError(f"Unsupported report verdict: {verdict}.")
-            if not isfinite(confidence) or not 0.0 <= confidence <= 100.0:
-                raise ValueError("Report confidence must be a finite percentage from 0 to 100.")
+            if not isfinite(raw_probability) or not 0.0 <= raw_probability <= 1.0:
+                raise ValueError("Model score must be a finite probability from 0 to 1.")
 
             model_used = str(results_data["model_used"])
+            model_display_name = Config.CIFAKE_MODEL_DISPLAY_NAMES.get(
+                model_used, model_used
+            )
+            preprocessing_description = Config.CIFAKE_MODEL_PREPROCESSING.get(
+                model_used, "Model-specific preprocessing"
+            )
+            score_type = Config.CIFAKE_MODEL_SCORE_TYPES.get(model_used, "model")
+            limitation_notice = str(
+                results_data.get("disclaimer", Config.CIFAKE_LIMITATION_NOTICE)
+            )
             timestamp = str(
                 results_data.get("timestamp") or datetime.now(timezone.utc).isoformat()
             )
             original_path = Path(original_image_path)
-            ela_path = Path(ela_image_path)
             with Image.open(original_path) as original_image:
                 original_size = original_image.size
                 original_channels = len(original_image.getbands())
-            with Image.open(ela_path) as ela_image:
-                ela_size = ela_image.size
-                ela_image.verify()
 
             pdf = FPDF()
             pdf.set_auto_page_break(auto=True, margin=10)
@@ -76,7 +82,7 @@ class ReportService:
             pdf.cell(
                 0,
                 8,
-                Config.FORENSIC_REPORT_TITLE,
+                Config.CIFAKE_REPORT_TITLE,
                 new_x=XPos.LMARGIN,
                 new_y=YPos.NEXT,
             )
@@ -84,7 +90,7 @@ class ReportService:
             pdf.cell(
                 0,
                 6,
-                Config.FORENSIC_REPORT_SUBTITLE,
+                Config.CIFAKE_REPORT_SUBTITLE,
                 new_x=XPos.LMARGIN,
                 new_y=YPos.NEXT,
             )
@@ -97,75 +103,60 @@ class ReportService:
             )
             pdf.ln(3)
 
-            is_authentic = verdict == Config.AUTHENTIC_LABEL_NAME
-            display_verdict = (
-                Config.AUTHENTIC_LABEL_NAME
-                if is_authentic
-                else Config.CLASS_LABELS[Config.MANIPULATED_LABEL]
-            )
-            verdict_color = (35, 100, 55) if is_authentic else (150, 35, 35)
+            is_real = verdict == Config.CIFAKE_CLASS_LABELS[0]
+            verdict_color = (35, 100, 55) if is_real else (150, 35, 35)
             pdf.set_fill_color(242, 245, 248)
             summary_y = pdf.get_y()
-            pdf.rect(10, summary_y, page_width, 22, style="F")
+            pdf.rect(10, summary_y, page_width, 24, style="F")
             pdf.set_xy(14, summary_y + 3)
             pdf.set_text_color(*verdict_color)
             pdf.set_font("Helvetica", "B", 13)
             pdf.cell(
                 page_width - 8,
                 7,
-                f"Verdict: {display_verdict}",
+                f"Prediction: {verdict}",
                 new_x=XPos.LMARGIN,
                 new_y=YPos.NEXT,
             )
             pdf.set_x(14)
-            pdf.set_font("Helvetica", "B", 11)
-            pdf.cell(page_width - 8, 7, f"Confidence: {confidence:.2f}%")
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(
+                page_width - 8,
+                7,
+                f"AI-generated score ({score_type}): {raw_probability:.4f}",
+            )
             pdf.set_text_color(0, 0, 0)
-            pdf.set_y(summary_y + 26)
+            pdf.set_xy(10, summary_y + 28)
 
             pdf.set_font("Helvetica", "B", 10)
-            pdf.cell(0, 7, "VISUAL EVIDENCE", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            gap = 6
-            card_width = (page_width - gap) / 2
+            pdf.cell(0, 7, "UPLOADED IMAGE", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             card_y = pdf.get_y()
             card_height = 77
             pdf.set_draw_color(170, 175, 180)
-            pdf.rect(10, card_y, card_width, card_height)
-            pdf.rect(10 + card_width + gap, card_y, card_width, card_height)
+            pdf.rect(10, card_y, page_width, card_height)
             pdf.set_font("Helvetica", "B", 8)
             pdf.set_xy(12, card_y + 2)
-            pdf.cell(card_width - 4, 5, "Original Uploaded Image", align="C")
-            pdf.set_xy(12 + card_width + gap, card_y + 2)
-            pdf.cell(
-                card_width - 4,
-                5,
-                f"Enhanced Error Level Analysis (ELA) - {Config.ELA_ENHANCEMENT_FACTOR:g}x Scale",
-                align="C",
-            )
+            pdf.cell(page_width - 4, 5, "Original Uploaded Image", align="C")
 
             image_top = card_y + 9
             image_bottom = card_y + card_height - 3
-            image_box_width = card_width - 8
+            image_box_width = page_width - 8
             image_box_height = image_bottom - image_top
-            for image_path, image_size, x in (
-                (original_path, original_size, 14),
-                (ela_path, ela_size, 14 + card_width + gap),
-            ):
-                scale = min(
-                    image_box_width / image_size[0],
-                    image_box_height / image_size[1],
-                )
-                image_width = image_size[0] * scale
-                image_height = image_size[1] * scale
-                image_x = x + (image_box_width - image_width) / 2
-                image_y = image_top + (image_box_height - image_height) / 2
-                pdf.image(
-                    str(image_path),
-                    x=image_x,
-                    y=image_y,
-                    w=image_width,
-                    h=image_height,
-                )
+            scale = min(
+                image_box_width / original_size[0],
+                image_box_height / original_size[1],
+            )
+            image_width = original_size[0] * scale
+            image_height = original_size[1] * scale
+            image_x = 14 + (image_box_width - image_width) / 2
+            image_y = image_top + (image_box_height - image_height) / 2
+            pdf.image(
+                str(original_path),
+                x=image_x,
+                y=image_y,
+                w=image_width,
+                h=image_height,
+            )
             pdf.set_y(card_y + card_height + 4)
 
             input_size_mb = original_path.stat().st_size / (1024 * 1024)
@@ -178,16 +169,19 @@ class ReportService:
                 f"Original dimensions: {original_size[0]} x {original_size[1]} px",
                 f"Color channels: {original_channels}",
                 f"Input size: {input_size_mb:.2f} MB",
-                f"Model used: {model_used}",
-                f"ELA quality factor: {Config.ELA_QUALITY}",
-                f"ELA visualization scale: {Config.ELA_ENHANCEMENT_FACTOR:g}x",
+                f"Model used: {model_display_name}",
+                f"Preprocessing: {preprocessing_description}",
+                f"Score type: {score_type}",
+                f"Decision threshold: {Config.CLASSIFICATION_THRESHOLD}",
             )
             for item in metadata:
-                pdf.cell(0, 5, item, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                pdf.multi_cell(
+                    0, 5, item, new_x=XPos.LMARGIN, new_y=YPos.NEXT
+                )
             pdf.ln(3)
 
             disclaimer_y = pdf.get_y()
-            disclaimer_height = 31
+            disclaimer_height = 35
             if disclaimer_y + disclaimer_height > pdf.h - 10:
                 pdf.add_page()
                 disclaimer_y = pdf.get_y()
@@ -200,18 +194,18 @@ class ReportService:
             pdf.cell(
                 page_width - 6,
                 5,
-                "MANDATORY FORENSIC DISCLAIMER",
+                "LIMITATION NOTICE",
                 new_x=XPos.LMARGIN,
                 new_y=YPos.NEXT,
             )
             pdf.set_xy(13, disclaimer_y + 9)
             pdf.set_font("Helvetica", "", 8)
-            pdf.multi_cell(page_width - 6, 4, Config.FORENSIC_REPORT_DISCLAIMER)
+            pdf.multi_cell(page_width - 6, 4, limitation_notice)
             pdf.set_text_color(0, 0, 0)
 
             return bytes(pdf.output())
         except (KeyError, OSError, TypeError, ValueError, FPDFException) as error:
-            logger.error("Forensic PDF report generation failed: %s", error)
+            logger.error("Classification PDF report generation failed: %s", error)
             raise ReportGenerationError(
-                f"Unable to generate forensic PDF report: {error}"
+                f"Unable to generate classification PDF report: {error}"
             ) from error

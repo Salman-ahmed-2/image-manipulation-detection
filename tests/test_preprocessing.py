@@ -134,6 +134,24 @@ def test_prepare_tensor_returns_batch_ready_shape_and_range(mode: str) -> None:
     assert result.max() <= 1.0
 
 
+def test_prepare_tensor_cifake_bilinear_rgb_unit_range() -> None:
+    """Resize with bilinear resampling to 32x32 RGB and normalize to [0, 1] float32."""
+    image = Image.new("RGBA", (64, 48), color=(25, 100, 255, 255))
+
+    result = prepare_tensor(
+        image,
+        target_size=Config.CIFAKE_TARGET_SIZE,
+        mode=Config.CIFAKE_NORMALIZATION_MODE,
+        resample=Image.Resampling.BILINEAR,
+    )
+
+    assert result.shape == (1, *Config.CIFAKE_INPUT_SHAPE)
+    assert result.dtype == np.float32
+    assert result.min() >= 0.0
+    assert result.max() <= 1.0
+    assert result[0, 0, 0].tolist() == pytest.approx([25 / 255.0, 100 / 255.0, 1.0])
+
+
 def test_normalize_image_rejects_unsupported_mode_and_out_of_range_pixels() -> None:
     """Reject invalid modes and pixel values outside the supported input range."""
     with pytest.raises(ValueError, match="Unsupported normalization mode"):

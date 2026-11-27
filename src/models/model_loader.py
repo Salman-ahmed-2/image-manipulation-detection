@@ -10,8 +10,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 import numpy as np
+from PIL import Image
 
 from config import Config
+from src.models.huggingface_image_classifier import HuggingFaceImageClassifier
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -63,108 +65,140 @@ class ModelLoader:
     """Thread-safe in-memory cache and registry for deep learning models."""
 
     _registry: Dict[str, Any] = {}
-
-    @classmethod
-    def _resolve_mobilenet_path(cls) -> Path:
-        """Return the best available MobileNetV2 model path.
-
-        Prefers ``mobilenetv2.keras`` (Colab export convention) if present in
-        ``Config.MODEL_DIR``, falling back to the legacy ``mobilenet_model.keras``
-        filename so that existing local deployments continue to work without
-        renaming files.
-
-        Returns:
-            Path: Resolved path to the MobileNetV2 weights file.
-        """
-        if Config.MODEL_PATH_MOBILENET_V2.exists():
-            logger.debug(
-                "Resolved MobileNet path to Colab export: %s",
-                Config.MODEL_PATH_MOBILENET_V2,
-            )
-            return Config.MODEL_PATH_MOBILENET_V2
-        return Config.MODEL_PATH_MOBILENET
+    _load_errors: Dict[str, str] = {}
 
     @classmethod
     def load_all_models(cls) -> None:
-        """Check Config.MODEL_DIR and load all configured models into memory.
+        """Load the CIFAKE CNN and optional Hugging Face model at startup.
 
-        Scans for cnn_model.keras and, for MobileNetV2, prefers mobilenetv2.keras
-        (Colab export convention) over the legacy mobilenet_model.keras filename.
-        If present, loads and executes a dummy warmup pass using
-        tf.zeros((1, 224, 224, 3)) to build the computation graph.
-        If absent or if TensorFlow is unavailable, logs a warning and registers a
-        lightweight mock fallback model.
+        A failure loading either model is recorded independently so it does not
+        prevent the other configured model from being used.
         """
-        models_to_load = {
-            "cnn": Config.MODEL_PATH_CNN,
-            "mobilenet": cls._resolve_mobilenet_path(),
-        }
+        name = Config.CIFAKE_MODEL_NAME
+        path_obj = Path(Config.MODEL_PATH_CIFAKE_CNN)
+        cls._registry.pop(name, None)
+        cls._load_errors.pop(name, None)
 
-        # Attempt to import TensorFlow lazily
-        tf_module = None
-        try:
-            import tensorflow as tf  # type: ignore
-
-            tf_module = tf
-        except ImportError:
-            logger.warning(
-                "TensorFlow is not installed in the current environment. "
-                "Registering mock fallback predictors for all models."
+        if not path_obj.exists():
+            message = (
+                f"CIFAKE Custom CNN model file not found at '{path_obj}'. "
+                "Place the trained model at that path and restart the application."
             )
-
-        for name, path in models_to_load.items():
-            path_obj = Path(path)
-            if tf_module is not None and path_obj.exists():
+            logger.error(message)
+            cls._load_errors[name] = message
+        else:
+            try:
+                import tensorflow as tf  # type: ignore
+            except ImportError as exc:
+                message = f"TensorFlow is unavailable; cannot load model '{name}': {exc}"
+                logger.error(message)
+                cls._load_errors[name] = message
+            else:
                 try:
                     logger.info("Loading '%s' weights from %s...", name, path_obj)
-                    model = tf_module.keras.models.load_model(str(path_obj))
+                    model = tf.keras.models.load_model(str(path_obj))
 
                     # Execute warmup pass to eliminate first-request inference latency
-                    warmup_input = tf_module.zeros((1, 224, 224, 3), dtype=tf_module.float32)
+                    warmup_input = tf.zeros(
+                        (1, *Config.CIFAKE_INPUT_SHAPE), dtype=tf.float32
+                    )
                     _ = model(warmup_input, training=False)
 
                     cls._registry[name] = model
                     logger.info("Model '%s' successfully loaded and warmed up.", name)
-                    continue
                 except Exception as exc:  # noqa: BLE001
-                    logger.error(
-                        "Failed to load model '%s' from %s: %s. Using fallback.",
-                        name,
-                        path_obj,
-                        exc,
-                    )
+                    message = f"Failed to load CIFAKE Custom CNN model from '{path_obj}': {exc}"
+                    logger.error(message)
+                    cls._load_errors[name] = message
 
-            # Register fallback predictor if file does not exist or failed to load
-            logger.warning(
-                "Model file for '%s' not found at %s. Registering fallback mock model.",
-                name,
-                path_obj,
+        cls._load_huggingface_model()
+
+    @classmethod
+    def _load_huggingface_model(cls) -> None:
+        """Load the pinned Hugging Face ViT and its matching image processor."""
+        name = Config.HUGGINGFACE_MODEL_NAME
+        cls._registry.pop(name, None)
+        cls._load_errors.pop(name, None)
+        try:
+            import torch
+            from transformers import AutoImageProcessor, AutoModelForImageClassification
+            if not hasattr(torch, "inference_mode"):
+                raise ImportError("Installed PyTorch does not provide inference_mode().")
+        except ImportError as exc:
+            message = (
+                "Hugging Face ViT dependencies are unavailable; install the project "
+                f"requirements to enable '{name}': {exc}"
             )
-            cls._registry[name] = MockFallbackModel(model_name=name)
+            logger.error(message)
+            cls._load_errors[name] = message
+            return
+
+        try:
+            logger.info(
+                "Loading Hugging Face model '%s' at revision %s...",
+                Config.HUGGINGFACE_MODEL_ID,
+                Config.HUGGINGFACE_MODEL_REVISION,
+            )
+            processor = AutoImageProcessor.from_pretrained(
+                Config.HUGGINGFACE_MODEL_ID,
+                revision=Config.HUGGINGFACE_MODEL_REVISION,
+            )
+            model = AutoModelForImageClassification.from_pretrained(
+                Config.HUGGINGFACE_MODEL_ID,
+                revision=Config.HUGGINGFACE_MODEL_REVISION,
+                use_safetensors=True,
+            )
+            classifier = HuggingFaceImageClassifier(model, processor)
+            classifier.predict_image(
+                Image.new("RGB", Config.HUGGINGFACE_TARGET_SIZE, color="black")
+            )
+            cls._registry[name] = classifier
+            logger.info("Hugging Face model '%s' loaded on CPU.", name)
+        except Exception as exc:  # noqa: BLE001
+            message = (
+                f"Failed to load Hugging Face model '{Config.HUGGINGFACE_MODEL_ID}' "
+                f"at revision '{Config.HUGGINGFACE_MODEL_REVISION}': {exc}"
+            )
+            logger.error(message)
+            cls._load_errors[name] = message
 
     @classmethod
     def get_model(cls, name: str) -> Optional[Any]:
         """Retrieve pre-loaded model instance by key.
 
         Args:
-            name: Logical name of the model ('cnn' or 'mobilenet').
+            name: Logical name of the model (e.g. ``'cifake_cnn'``).
 
         Returns:
-            The loaded Keras model or fallback predictor, or None if not registered.
+            The loaded Keras model, or None if not registered.
         """
         return cls._registry.get(name.lower())
+
+    @classmethod
+    def get_load_error(cls, name: str) -> Optional[str]:
+        """Return the recorded startup load error for a model, if any.
+
+        Args:
+            name: Logical model identifier.
+
+        Returns:
+            Human-readable error description or ``None``.
+        """
+        return cls._load_errors.get(name.lower())
 
     @classmethod
     def register_model(cls, name: str, model: Any) -> None:
         """Manually register a model instance in the in-memory cache.
 
-        Useful for testing, custom mocks, or dynamic fine-tuning experiments.
+        Useful for testing or custom overrides.
 
         Args:
             name: Logical model identifier.
-            model: Model object (Keras model, mock, or callable).
+            model: Model object (Keras model or callable).
         """
-        cls._registry[name.lower()] = model
+        key = name.lower()
+        cls._registry[key] = model
+        cls._load_errors.pop(key, None)
         logger.info("Model '%s' manually registered in ModelLoader cache.", name)
 
     @classmethod
@@ -182,6 +216,7 @@ class ModelLoader:
 
     @classmethod
     def clear_cache(cls) -> None:
-        """Clear all cached model instances. Primarily used in test teardown."""
+        """Clear all cached model instances and recorded load errors."""
         cls._registry.clear()
+        cls._load_errors.clear()
         logger.debug("ModelLoader in-memory registry cleared.")

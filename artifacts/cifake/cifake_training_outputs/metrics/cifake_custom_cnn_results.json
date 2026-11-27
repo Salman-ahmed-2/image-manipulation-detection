@@ -1,0 +1,102 @@
+{
+  "validation": {
+    "n": 15000,
+    "class_labels": {
+      "0": "REAL (CIFAR-10 photo)",
+      "1": "FAKE (AI-generated)"
+    },
+    "accuracy": 0.9541333333333334,
+    "precision": 0.972661670829864,
+    "recall": 0.9345333333333333,
+    "f1_score": 0.9532163742690059,
+    "roc_auc": 0.9927611733333332,
+    "threshold": 0.5,
+    "confusion_matrix_labels_0_1": [
+      [
+        7303,
+        197
+      ],
+      [
+        491,
+        7009
+      ]
+    ],
+    "classification_report": {
+      "REAL (CIFAR-10 photo)": {
+        "precision": 0.9370028226841159,
+        "recall": 0.9737333333333333,
+        "f1-score": 0.9550150385772198,
+        "support": 7500.0
+      },
+      "FAKE (AI-generated)": {
+        "precision": 0.972661670829864,
+        "recall": 0.9345333333333333,
+        "f1-score": 0.9532163742690059,
+        "support": 7500.0
+      },
+      "accuracy": 0.9541333333333334,
+      "macro avg": {
+        "precision": 0.95483224675699,
+        "recall": 0.9541333333333333,
+        "f1-score": 0.9541157064231128,
+        "support": 15000.0
+      },
+      "weighted avg": {
+        "precision": 0.95483224675699,
+        "recall": 0.9541333333333334,
+        "f1-score": 0.9541157064231128,
+        "support": 15000.0
+      }
+    }
+  },
+  "test": {
+    "n": 20000,
+    "class_labels": {
+      "0": "REAL (CIFAR-10 photo)",
+      "1": "FAKE (AI-generated)"
+    },
+    "accuracy": 0.953,
+    "precision": 0.97544080604534,
+    "recall": 0.9294,
+    "f1_score": 0.951863990167964,
+    "roc_auc": 0.991892605,
+    "threshold": 0.5,
+    "confusion_matrix_labels_0_1": [
+      [
+        9766,
+        234
+      ],
+      [
+        706,
+        9294
+      ]
+    ],
+    "classification_report": {
+      "REAL (CIFAR-10 photo)": {
+        "precision": 0.9325821237585944,
+        "recall": 0.9766,
+        "f1-score": 0.954083626416569,
+        "support": 10000.0
+      },
+      "FAKE (AI-generated)": {
+        "precision": 0.97544080604534,
+        "recall": 0.9294,
+        "f1-score": 0.951863990167964,
+        "support": 10000.0
+      },
+      "accuracy": 0.953,
+      "macro avg": {
+        "precision": 0.9540114649019672,
+        "recall": 0.9530000000000001,
+        "f1-score": 0.9529738082922665,
+        "support": 20000.0
+      },
+      "weighted avg": {
+        "precision": 0.9540114649019672,
+        "recall": 0.953,
+        "f1-score": 0.9529738082922664,
+        "support": 20000.0
+      }
+    }
+  }
+}

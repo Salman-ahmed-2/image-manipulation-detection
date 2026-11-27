@@ -50,6 +50,7 @@ def prepare_tensor(
     image: Image.Image,
     target_size: tuple[int, int] = Config.TARGET_SIZE,
     mode: str = "standard",
+    resample: Image.Resampling = Image.Resampling.BICUBIC,
 ) -> np.ndarray:
     """Resize, normalize, and batch an image for model inference.
 
@@ -57,6 +58,7 @@ def prepare_tensor(
         image: Source Pillow image.
         target_size: Target width and height. Defaults to ``Config.TARGET_SIZE``.
         mode: Normalization mode accepted by :func:`normalize_image`.
+        resample: Pillow resampling filter. Defaults to ``Image.Resampling.BICUBIC``.
 
     Returns:
         A float32 batch tensor shaped ``(1, height, width, 3)``.
@@ -65,6 +67,6 @@ def prepare_tensor(
         ValueError: If target_size or mode is invalid, or the pixels cannot be
             normalized.
     """
-    resized_image = resize_image(image, target_size=target_size)
+    resized_image = resize_image(image, target_size=target_size, resample=resample)
     normalized_image = normalize_image(np.asarray(resized_image), mode=mode)
     return np.expand_dims(normalized_image, axis=0)

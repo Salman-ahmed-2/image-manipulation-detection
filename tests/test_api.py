@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock
@@ -23,8 +24,9 @@ def test_home_page_returns_ok(client: FlaskClient) -> None:
     assert 'name="image"' in page
     assert 'name="model"' in page
     assert f'data-max-file-size="{Config.MAX_CONTENT_LENGTH}"' in page
-    assert "MobileNetV2 (Recommended)" in page
-    assert "Custom CNN" in page
+    assert "CIFAKE Custom CNN" in page
+    assert "Hugging Face ViT" in page
+    assert Config.CIFAKE_LIMITATION_NOTICE in html.unescape(page)
     assert 'css/style.css' in page
     assert 'js/main.js' in page
 
@@ -56,11 +58,12 @@ def test_about_page_returns_ok(client: FlaskClient) -> None:
 
     assert response.status_code == 200
     page = response.get_data(as_text=True)
-    assert "Copy-move" in page
-    assert "Splicing" in page
-    assert "False positives" in page
-    assert "False negatives" in page
-    assert Config.ELA_DISCLAIMER in page
+    assert "CIFAKE" in page
+    assert "Hugging Face ViT" in page
+    assert "95.3%" in page
+    assert Config.CIFAKE_LIMITATION_NOTICE in html.unescape(page)
+    assert Config.HUGGINGFACE_LIMITATION_NOTICE in html.unescape(page)
+    assert "Error Level Analysis" not in page
     assert "Member 4" in page
 
 
@@ -75,13 +78,15 @@ def test_html_upload_error_renders_structured_error_page(client: FlaskClient) ->
 
 
 def test_health_returns_healthy_status(client: FlaskClient) -> None:
-    """The health endpoint reports the application and model state."""
+    """The health endpoint reports the application and CIFAKE model state."""
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.get_json()["status"] == "healthy"
-    assert response.get_json()["models_loaded"]["cnn"] is True
-    assert response.get_json()["models_loaded"]["mobilenet"] is True
+    body = response.get_json()
+    assert body["status"] == "healthy"
+    assert body["models_loaded"][Config.CIFAKE_MODEL_NAME] is True
+    assert body["models_loaded"][Config.HUGGINGFACE_MODEL_NAME] is True
+    assert body["active_model"] == Config.CIFAKE_MODEL_NAME
 
 
 def test_analyze_without_file_returns_bad_request(client: FlaskClient) -> None:
@@ -110,7 +115,7 @@ def test_analyze_valid_synthetic_image_returns_json(
     synthetic_jpeg_bytes: bytes,
     mock_predictor: Mock,
 ) -> None:
-    """A synthetic JPEG is analyzed and returned with artifact URLs."""
+    """A synthetic JPEG is classified and returned without ELA artifacts."""
     response = client.post(
         "/analyze",
         data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
@@ -121,18 +126,44 @@ def test_analyze_valid_synthetic_image_returns_json(
     body = response.get_json()
     assert response.status_code == 200
     assert body["status"] == "success"
-    assert body["prediction"]["label"] == "Potentially Manipulated"
-    assert body["prediction"]["confidence"] == 93.4
-    assert body["prediction"]["model_used"] == "mobilenet"
+    assert body["prediction"]["label"] == "AI-generated"
+    assert body["prediction"]["model_score"] == 0.934
+    assert body["prediction"]["raw_probability"] == 0.934
+    assert body["prediction"]["model_used"] == Config.CIFAKE_MODEL_NAME
     assert body["artifacts"]["original_image_url"].startswith("/static/temp/")
-    assert body["artifacts"]["ela_image_url"].startswith("/static/temp/")
+    assert "ela_image_url" not in body["artifacts"]
+    assert body["limitation_notice"] == Config.CIFAKE_LIMITATION_NOTICE
     original_response = client.get(body["artifacts"]["original_image_url"])
-    ela_response = client.get(body["artifacts"]["ela_image_url"])
     assert original_response.status_code == 200
     assert original_response.mimetype == "image/jpeg"
-    assert ela_response.status_code == 200
-    assert ela_response.mimetype == "image/png"
     mock_predictor.assert_called_once()
+
+
+def test_analyze_with_huggingface_model_returns_real_vs_ai_result(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+) -> None:
+    """The second model returns a correctly labeled result and its own limitation."""
+    response = client.post(
+        "/analyze",
+        data={
+            "image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg"),
+            "model": Config.HUGGINGFACE_MODEL_NAME,
+        },
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["prediction"]["label"] == "AI-generated"
+    assert body["prediction"]["raw_probability"] == pytest.approx(0.75)
+    assert body["prediction"]["model_used"] == Config.HUGGINGFACE_MODEL_NAME
+    assert (
+        body["prediction"]["model_display_name"]
+        == Config.CIFAKE_MODEL_DISPLAY_NAMES[Config.HUGGINGFACE_MODEL_NAME]
+    )
+    assert body["limitation_notice"] == Config.HUGGINGFACE_LIMITATION_NOTICE
 
 
 def test_analyze_valid_synthetic_image_renders_html(
@@ -140,7 +171,7 @@ def test_analyze_valid_synthetic_image_renders_html(
     synthetic_jpeg_bytes: bytes,
     mock_predictor: Mock,
 ) -> None:
-    """A browser upload receives the rendered results page."""
+    """A browser upload receives the rendered CIFAKE results page."""
     response = client.post(
         "/analyze",
         data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
@@ -150,41 +181,76 @@ def test_analyze_valid_synthetic_image_renders_html(
 
     assert response.status_code == 200
     page = response.get_data(as_text=True)
-    assert "Potentially Manipulated" in page
+    assert "AI-generated" in page
     assert "100 × 100 px" in page
     assert "RGB" in page
-    assert "MobileNetV2" in page
+    assert "CIFAKE Custom CNN" in page
     assert "Model Architecture" in page
     assert "Analysis Latency" in page
     assert "ms" in page
-    assert Config.ELA_DISCLAIMER in page
+    assert Config.CIFAKE_LIMITATION_NOTICE in html.unescape(page)
     assert "Download PDF Report" in page
-    assert "93.4%" in page
-    assert "ela" in page.lower()
+    assert "0.9340" in page
+    assert "Error Level Analysis" not in page
     mock_predictor.assert_called_once()
 
 
-def test_analyze_png_renders_ela_view(
+def test_analyze_missing_model_returns_explicit_error(
     client: FlaskClient,
-    synthetic_png_bytes: bytes,
-    mock_predictor: Mock,
+    synthetic_jpeg_bytes: bytes,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A synthetic PNG passes through analysis and serves its ELA visualization."""
+    """Missing CIFAKE model surfaces an explicit 503 error with no fallback prediction."""
+    from src.models.model_loader import ModelLoader
+
+    ModelLoader.clear_cache()
+    monkeypatch.setitem(
+        ModelLoader._load_errors,
+        Config.CIFAKE_MODEL_NAME,
+        "CIFAKE Custom CNN model file not found at '/nonexistent/cifake_custom_cnn.keras'.",
+    )
+
     response = client.post(
         "/analyze",
-        data={"image": (BytesIO(synthetic_png_bytes), "synthetic.png")},
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
         content_type="multipart/form-data",
         headers={"Accept": "application/json"},
     )
 
     body = response.get_json()
-    assert response.status_code == 200
-    assert body["status"] == "success"
-    assert body["artifacts"]["ela_image_url"].endswith("/ela_result.png")
-    ela_response = client.get(body["artifacts"]["ela_image_url"])
-    assert ela_response.status_code == 200
-    assert ela_response.mimetype == "image/png"
-    mock_predictor.assert_called_once()
+    assert response.status_code == 503
+    assert body["status"] == "error"
+    assert body["error_code"] == "MODEL_NOT_LOADED"
+    assert "cifake_custom_cnn.keras" in body["message"]
+
+
+def test_analyze_inference_error_returns_explicit_error(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Inference failure returns an explicit 500 error without fallback."""
+    from src.models.predictor import Predictor
+    from src.utils.exceptions import ModelInferenceError
+
+    monkeypatch.setattr(
+        Predictor,
+        "predict",
+        Mock(side_effect=ModelInferenceError("Simulated forward pass failure")),
+    )
+
+    response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 500
+    assert body["status"] == "error"
+    assert body["error_code"] == "MODEL_INFERENCE_ERROR"
+    assert "Simulated forward pass failure" in body["message"]
 
 
 def test_executable_payload_disguised_as_jpeg_is_rejected(
@@ -221,8 +287,8 @@ def test_oversized_upload_returns_payload_too_large(
 @pytest.mark.parametrize(
     ("verdict_code", "verdict_label", "badge_class"),
     [
-        (1, "Potentially Manipulated", "text-bg-danger"),
-        (0, "Authentic Image", "text-bg-success"),
+        (1, "AI-generated", "text-bg-danger"),
+        (0, "Real photo", "text-bg-success"),
     ],
 )
 def test_result_template_accepts_nested_mock_results(
@@ -231,7 +297,7 @@ def test_result_template_accepts_nested_mock_results(
     verdict_label: str,
     badge_class: str,
 ) -> None:
-    """Render both verdict states with the documented nested result shape."""
+    """Render both CIFAKE verdict states with the nested result shape."""
     with app.test_request_context():
         page = render_template(
             "result.html",
@@ -239,23 +305,20 @@ def test_result_template_accepts_nested_mock_results(
                 "session_id": "test-session",
                 "verdict_label": verdict_label,
                 "verdict_code": verdict_code,
-                "confidence": 93.4,
-                "model_used": "mobilenet_v2",
+                "raw_probability": 0.934,
+                "model_used": Config.CIFAKE_MODEL_NAME,
                 "original_image_path": "/static/temp/test/orig.jpg",
-                "ela_image_path": "/static/temp/test/ela.png",
-                "disclaimer": "ELA is an investigative aid.",
+                "disclaimer": Config.CIFAKE_LIMITATION_NOTICE,
             },
         )
 
     assert verdict_label in page
-    assert "93.4%" in page
+    assert "0.9340" in page
     assert badge_class in page
     assert "/report/test-session" in page
     assert "/static/temp/test/orig.jpg" in page
-    assert "/static/temp/test/ela.png" in page
-    assert Config.ELA_DISCLAIMER in page
-    assert 'id="imageInspectToggle"' in page
-    assert 'class="col-lg-6"' in page
+    assert Config.CIFAKE_LIMITATION_NOTICE in html.unescape(page)
+    assert "Error Level Analysis" not in page
     assert "Analyze Another Image" in page
 
 
@@ -280,7 +343,7 @@ def test_report_download_returns_pdf_for_completed_session(
     assert response.data.startswith(b"%PDF")
     assert len(response.data) > 1000
     assert response.headers["Content-Disposition"] == (
-        f"attachment; filename=forensic_report_{session_id}.pdf"
+        f"attachment; filename=classification_report_{session_id}.pdf"
     )
     assert not (Path(Config.UPLOAD_FOLDER) / session_id).exists()
 

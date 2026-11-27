@@ -1,41 +1,37 @@
 {% extends "base.html" %}
 
-{% block title %}About · Image Forensic Scanner{% endblock %}
+{% block title %}About · CIFAKE AI Image Classifier{% endblock %}
 
 {% block content %}
 <header class="page-header mb-5">
   <span class="eyebrow">Project background</span>
-  <h1 class="display-6 fw-bold mt-3">Understanding image forensics</h1>
+  <h1 class="display-6 fw-bold mt-3">Real-Photo vs. AI-Generated Classification</h1>
   <p class="lead text-secondary mb-0">
-    An educational introduction to image tampering, deep-learning screening, and the
-    limits of Error Level Analysis.
+    An educational web application offering two classifiers for real-photo vs.
+    AI-generated image classification.
   </p>
 </header>
 
-<section class="row g-4 mb-5" aria-labelledby="tamperingTitle">
+<section class="row g-4 mb-5" aria-labelledby="cifakeTitle">
   <div class="col-lg-7">
     <article class="card h-100 border-0 shadow-sm">
       <div class="card-body p-4 p-lg-5">
-        <span class="section-kicker">Digital image tampering</span>
-        <h2 class="h3 mt-2" id="tamperingTitle">How can an image be altered?</h2>
+        <span class="section-kicker">Dataset &amp; Model</span>
+        <h2 class="h3 mt-2" id="cifakeTitle">Available classifiers</h2>
         <p>
-          Digital image manipulation ranges from routine edits to changes that alter
-          the meaning of a photograph. Two common forms of tampering are copy-move
-          editing and image splicing.
+          <strong>CIFAKE Custom CNN:</strong> trained on 32×32 RGB real photographs
+          from CIFAR-10 and AI-generated images from CIFAKE.
         </p>
-        <h3 class="h5 mt-4">Copy-move</h3>
         <p>
-          In a copy-move edit, a region is copied from one part of an image and placed
-          elsewhere in that same image. The operation may conceal an object or repeat
-          a visual element; duplicated texture or compression behavior can sometimes
-          provide clues for further inspection.
+          <strong>Hugging Face ViT:</strong> a separately downloaded third-party
+          Vision Transformer classifier. It uses its own 224×224 image processor and
+          was trained on a different real-vs-AI dataset.
         </p>
-        <h3 class="h5 mt-4">Splicing</h3>
+        <h3 class="h5 mt-4">Preprocessing and model score</h3>
         <p class="mb-0">
-          Splicing combines content from two or more images. Differences in lighting,
-          sharpness, noise, perspective, or compression history may occur at the
-          boundaries between sources, but ordinary image processing can create similar
-          inconsistencies.
+          The selected model applies its own preprocessing. Its score represents the
+          model's output for AI-generated content; it is not calibrated or a guarantee
+          of authenticity.
         </p>
       </div>
     </article>
@@ -43,64 +39,34 @@
   <div class="col-lg-5">
     <aside class="card h-100 border-0 bg-primary-subtle">
       <div class="card-body p-4 p-lg-5">
-        <div class="method-icon text-primary"><i class="bi bi-search" aria-hidden="true"></i></div>
-        <h2 class="h4 mt-3">A preliminary screening tool</h2>
+        <div class="method-icon text-primary"><i class="bi bi-info-circle" aria-hidden="true"></i></div>
+        <h2 class="h4 mt-3">Dataset-Specific Benchmark &amp; Limits</h2>
         <p>
-          This project combines a deep-learning classifier with an ELA visualization
-          to help users decide whether an image merits additional review.
+          On CIFAKE's 20,000-image held-out test set, the trained Custom CNN recorded
+          <strong>95.3% accuracy</strong>.
         </p>
         <p class="mb-0">
-          Its output is not a substitute for source verification, expert examination,
-          or a complete forensic workflow. A model score is an estimate, not a
-          certainty.
+          That result is specific to CIFAKE's 32×32 benchmark and does not represent
+          expected accuracy on arbitrary real-world photographs or images from other
+          generative models.
         </p>
+        <p class="mb-0 mt-3">{{ config.HUGGINGFACE_LIMITATION_NOTICE }}</p>
       </div>
     </aside>
   </div>
 </section>
 
-<section class="mb-5" aria-labelledby="elaTitle">
+<section class="mb-5" aria-labelledby="limitationsTitle">
   <div class="row justify-content-center">
     <div class="col-xl-10">
       <article class="card border-0 shadow-sm">
         <div class="card-body p-4 p-lg-5">
-          <span class="section-kicker">Reading the visualization</span>
-          <h2 class="h3 mt-2" id="elaTitle">What Error Level Analysis can—and cannot—show</h2>
-          <p>
-            ELA recompresses an image as JPEG and compares that version with the
-            original. The resulting difference image highlights areas that responded
-            differently to recompression. Images with consistent JPEG histories may
-            show relatively uniform differences, while an edited region can sometimes
-            stand out.
-          </p>
-          <div class="row g-4 mt-1">
-            <div class="col-md-6">
-              <div class="interpretation-note h-100">
-                <h3 class="h6"><i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i>False positives</h3>
-                <p class="mb-0">
-                  Bright edges, text, fine textures, and areas with strong contrast
-                  can naturally produce higher residual differences. Resizing,
-                  re-saving, or converting an image can also affect the visualization;
-                  brightness alone does not establish that an image was edited.
-                </p>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="interpretation-note h-100">
-                <h3 class="h6"><i class="bi bi-eye-slash me-2" aria-hidden="true"></i>False negatives</h3>
-                <p class="mb-0">
-                  Repeated lossy compression can make different regions look more
-                  alike, and some edits may leave no clearly distinguishable ELA
-                  pattern. ELA can therefore fail to highlight genuine manipulation.
-                  PNG input is converted for analysis and may have different baseline
-                  compression behavior.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="alert alert-warning mt-4 mb-0" role="note">
-            <i class="bi bi-info-circle-fill me-2" aria-hidden="true"></i>
-            {{ config.ELA_DISCLAIMER }}
+          <span class="section-kicker">Scope &amp; Limitations</span>
+          <h2 class="h3 mt-2" id="limitationsTitle">Important Limitations</h2>
+          <div class="alert alert-warning mt-3 mb-0" role="note">
+            <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+            {{ config.CIFAKE_LIMITATION_NOTICE }}
+            {{ config.HUGGINGFACE_LIMITATION_NOTICE }}
           </div>
         </div>
       </article>

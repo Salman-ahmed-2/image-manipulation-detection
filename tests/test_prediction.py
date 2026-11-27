@@ -11,11 +11,12 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import pytest
+from PIL import Image
 
 from config import Config
 from src.models.model_loader import MockFallbackModel, ModelLoader
 from src.models.predictor import Predictor
-from src.utils.exceptions import ModelInferenceError
+from src.utils.exceptions import ModelInferenceError, ModelNotLoadedError
 
 
 class DummyModel:
@@ -36,6 +37,18 @@ class ErrorModel:
         raise RuntimeError("GPU Out of Memory simulated failure.")
 
 
+class DummyImageModel:
+    """Image-native model stub returning a fixed AI-generated score."""
+
+    def __init__(self, probability: float = 0.85) -> None:
+        self.probability = probability
+        self.received_image: Image.Image | None = None
+
+    def predict_image(self, image: Image.Image) -> float:
+        self.received_image = image
+        return self.probability
+
+
 @pytest.fixture(autouse=True)
 def clean_model_cache():
     """Ensure clean model loader registry before and after each test."""
@@ -44,30 +57,39 @@ def clean_model_cache():
     ModelLoader.clear_cache()
 
 
-def test_model_loader_graceful_missing_files(caplog, monkeypatch):
-    """Test model loader registers mock fallback when weights are missing."""
-    monkeypatch.setattr(Config, "MODEL_PATH_CNN", Path("/nonexistent/cnn.keras"))
-    monkeypatch.setattr(Config, "MODEL_PATH_MOBILENET", Path("/nonexistent/mobilenet.keras"))
-    monkeypatch.setattr(Config, "MODEL_PATH_MOBILENET_V2", Path("/nonexistent/mobilenetv2.keras"))
-    with caplog.at_level(logging.WARNING):
+def test_model_loader_reports_missing_cifake_file_without_fallback(caplog, monkeypatch):
+    """Test model loader records an explicit error and never registers a fallback."""
+    missing_path = Path("/nonexistent/cifake_custom_cnn.keras")
+    huggingface_load_calls = []
+
+    def record_huggingface_load(cls):
+        huggingface_load_calls.append(cls)
+
+    monkeypatch.setattr(Config, "MODEL_PATH_CIFAKE_CNN", missing_path)
+    monkeypatch.setattr(
+        ModelLoader,
+        "_load_huggingface_model",
+        classmethod(record_huggingface_load),
+    )
+    with caplog.at_level(logging.ERROR):
         ModelLoader.load_all_models()
 
-    cnn_model = ModelLoader.get_model("cnn")
-    mobilenet_model = ModelLoader.get_model("mobilenet")
+    assert huggingface_load_calls == [ModelLoader]
+    assert ModelLoader.get_model(Config.CIFAKE_MODEL_NAME) is None
+    assert ModelLoader.get_model("mobilenet") is None
+    assert ModelLoader.is_fallback(Config.CIFAKE_MODEL_NAME) is False
+    load_error = ModelLoader.get_load_error(Config.CIFAKE_MODEL_NAME)
+    assert load_error is not None
+    assert str(missing_path) in load_error
 
-    assert cnn_model is not None
-    assert mobilenet_model is not None
-    assert isinstance(cnn_model, MockFallbackModel)
-    assert isinstance(mobilenet_model, MockFallbackModel)
-    assert ModelLoader.is_fallback("cnn") is True
-    assert ModelLoader.is_fallback("mobilenet") is True
-
-    # Check that descriptive warning was logged
-    warning_logged = any(
-        "not found" in record.message or "Registering fallback" in record.message
-        for record in caplog.records
+    error_logged = any(
+        "not found" in record.message for record in caplog.records
     )
-    assert warning_logged is True
+    assert error_logged is True
+
+    predictor = Predictor(model_name=Config.CIFAKE_MODEL_NAME)
+    with pytest.raises(ModelNotLoadedError, match="not found"):
+        predictor.predict(np.zeros((1, *Config.CIFAKE_INPUT_SHAPE), dtype=np.float32))
 
 
 def test_model_loader_caching_and_clear():
@@ -180,6 +202,82 @@ def test_prediction_runtime_inference_error():
     synthetic_input = np.zeros((1, 224, 224, 3), dtype=np.float32)
     with pytest.raises(ModelInferenceError, match="Model forward pass failed"):
         predictor.predict(synthetic_input)
+
+
+@pytest.mark.parametrize(
+    "prob,expected_code,expected_label",
+    [
+        (0.85, 1, "AI-generated"),
+        (0.50, 1, "AI-generated"),
+        (0.49, 0, "Real photo"),
+        (0.00, 0, "Real photo"),
+        (1.00, 1, "AI-generated"),
+    ],
+)
+def test_cifake_class_label_mapping_and_32x32_input(prob, expected_code, expected_label):
+    """Test CIFAKE label mapping (0=Real photo, 1=AI-generated) with 32x32 RGB input."""
+    dummy_model = DummyModel(probability=prob)
+    predictor = Predictor(model_name=Config.CIFAKE_MODEL_NAME, model=dummy_model)
+
+    synthetic_input = np.zeros((1, *Config.CIFAKE_INPUT_SHAPE), dtype=np.float32)
+    result = predictor.predict(synthetic_input)
+
+    assert result["verdict_code"] == expected_code
+    assert result["verdict_label"] == expected_label
+    assert result["raw_probability"] == pytest.approx(prob)
+    assert result["model_used"] == Config.CIFAKE_MODEL_NAME
+
+
+def test_cifake_rejects_non_32x32_tensor():
+    """Test CIFAKE predictor rejects tensors that do not match 32x32x3."""
+    predictor = Predictor(model_name=Config.CIFAKE_MODEL_NAME, model=DummyModel())
+    with pytest.raises(ValueError, match="Expected spatial dimensions"):
+        predictor.predict(np.zeros((1, 224, 224, 3), dtype=np.float32))
+
+
+@pytest.mark.parametrize(
+    "prob,expected_code,expected_label",
+    [
+        (0.85, 1, "AI-generated"),
+        (0.49, 0, "Real photo"),
+    ],
+)
+def test_huggingface_prediction_uses_ai_class_score(
+    prob: float,
+    expected_code: int,
+    expected_label: str,
+) -> None:
+    """Map the Hugging Face FAKE score into the app's shared class labels."""
+    model = DummyImageModel(probability=prob)
+    predictor = Predictor(model_name=Config.HUGGINGFACE_MODEL_NAME, model=model)
+    image = Image.new("RGB", (640, 480), color="blue")
+
+    result = predictor.predict_image(image)
+
+    assert model.received_image is image
+    assert result["raw_probability"] == pytest.approx(prob)
+    assert result["verdict_code"] == expected_code
+    assert result["verdict_label"] == expected_label
+    assert result["model_used"] == Config.HUGGINGFACE_MODEL_NAME
+
+
+def test_huggingface_prediction_wraps_inference_errors() -> None:
+    """Convert model-specific image inference failures to a domain exception."""
+
+    class BrokenImageModel:
+        """Raise an error while processing the source image."""
+
+        def predict_image(self, image: Image.Image) -> float:
+            del image
+            raise RuntimeError("processor unavailable")
+
+    predictor = Predictor(
+        model_name=Config.HUGGINGFACE_MODEL_NAME,
+        model=BrokenImageModel(),
+    )
+
+    with pytest.raises(ModelInferenceError, match="Model image inference failed"):
+        predictor.predict_image(Image.new("RGB", (32, 32)))
 
 
 def test_mock_fallback_model_behavior():

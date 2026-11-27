@@ -5,6 +5,8 @@ gunicorn>=21.2.0
 
 # Deep Learning & Neural Models
 tensorflow>=2.15.0
+torch>=2.2.0
+transformers>=4.39.3,<5
 
 # Computer Vision & Image Processing
 pillow>=10.2.0

@@ -29,9 +29,10 @@ class StubPredictor:
         """
         self.model_name = model_name
         self.tensor: np.ndarray | None = None
+        self.image: Image.Image | None = None
 
     def predict(self, tensor: np.ndarray) -> dict[str, Any]:
-        """Record the tensor and return a stable prediction.
+        """Record the tensor and return a stable CIFAKE prediction.
 
         Args:
             tensor: Batched, normalized image tensor.
@@ -43,8 +44,19 @@ class StubPredictor:
         return {
             "raw_probability": 0.942,
             "verdict_code": 1,
-            "verdict_label": "Potentially Manipulated",
+            "verdict_label": "AI-generated",
             "confidence": 94.2,
+            "model_used": self.model_name,
+        }
+
+    def predict_image(self, image: Image.Image) -> dict[str, Any]:
+        """Record a source image and return a stable Hugging Face model result."""
+        self.image = image
+        return {
+            "raw_probability": 0.81,
+            "verdict_code": 1,
+            "verdict_label": "AI-generated",
+            "confidence": 81.0,
             "model_used": self.model_name,
         }
 
@@ -78,10 +90,10 @@ def test_detection_service_initializes_with_active_model(
     predictor.assert_called_once_with(model_name=Config.ACTIVE_MODEL)
 
 
-def test_analyze_image_returns_prediction_paths_and_disclaimer(
+def test_analyze_image_returns_prediction_paths_and_limitation_notice(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Run the full pipeline on a synthetic upload and aggregate all result fields."""
+    """Run the CIFAKE pipeline on a synthetic upload without ELA artifacts."""
     monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
     predictors: list[StubPredictor] = []
 
@@ -99,35 +111,79 @@ def test_analyze_image_returns_prediction_paths_and_disclaimer(
         return predictor
 
     monkeypatch.setattr(detection_service, "Predictor", create_predictor)
-    service = DetectionService(model_name="cnn")
+    service = DetectionService()
     upload = _upload()
 
-    result = service.analyze_image(upload, "session-123", model_choice="mobilenet")
+    result = service.analyze_image(upload, "session-123")
 
     original_path = Path(result["original_image_path"])
-    ela_path = Path(result["ela_image_path"])
     assert original_path.parent == tmp_path / "session-123"
     assert original_path.name.endswith("_orig.jpg")
     assert original_path.is_file()
-    assert ela_path == tmp_path / "session-123" / "ela_result.png"
-    assert ela_path.is_file()
+    assert "ela_image_path" not in result
+    assert not (tmp_path / "session-123" / "ela_result.png").exists()
     assert result["session_id"] == "session-123"
     assert result["original_filename"] == "photo.jpg"
-    assert result["verdict_label"] == "Potentially Manipulated"
+    assert result["verdict_label"] == "AI-generated"
     assert result["verdict_code"] == 1
-    assert result["confidence"] == 94.2
     assert result["raw_probability"] == 0.942
-    assert result["model_used"] == "mobilenet"
+    assert result["model_used"] == Config.CIFAKE_MODEL_NAME
     assert result["image_dimensions"] == (18, 12)
     assert result["input_colorspace"] == "RGB"
     assert result["latency_ms"] >= 0
-    assert result["disclaimer"] == Config.ELA_DISCLAIMER
+    assert result["disclaimer"] == Config.CIFAKE_LIMITATION_NOTICE
     assert result["timestamp"]
-    assert len(predictors) == 2
+    assert len(predictors) == 1
     assert predictors[-1].tensor is not None
-    assert predictors[-1].tensor.shape == (1, *Config.INPUT_SHAPE)
-    assert predictors[-1].tensor.min() >= -1.0
+    assert predictors[-1].tensor.shape == (1, *Config.CIFAKE_INPUT_SHAPE)
+    assert predictors[-1].tensor.dtype == np.float32
+    assert predictors[-1].tensor.min() >= 0.0
     assert predictors[-1].tensor.max() <= 1.0
+
+
+def test_analyze_image_rejects_unsupported_model_choice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reject CASIA/MobileNet model names when only CIFAKE Custom CNN is enabled."""
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
+    service = DetectionService()
+
+    with pytest.raises(ValidationError, match="Unsupported model choice"):
+        service.analyze_image(_upload(), "session-123", model_choice="mobilenet")
+
+
+def test_analyze_image_uses_huggingface_processor_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pass the original decoded image to the Hugging Face processor path."""
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
+    predictors: list[StubPredictor] = []
+
+    def create_predictor(model_name: str) -> StubPredictor:
+        predictor = StubPredictor(model_name)
+        predictors.append(predictor)
+        return predictor
+
+    monkeypatch.setattr(detection_service, "Predictor", create_predictor)
+    result = DetectionService(model_name=Config.HUGGINGFACE_MODEL_NAME).analyze_image(
+        _upload(),
+        "session-hf",
+        model_choice=Config.HUGGINGFACE_MODEL_NAME,
+    )
+
+    assert len(predictors) == 1
+    assert predictors[0].tensor is None
+    assert predictors[0].image is not None
+    assert predictors[0].image.mode == "RGB"
+    assert predictors[0].image.size == (18, 12)
+    assert result["raw_probability"] == 0.81
+    assert result["model_display_name"] == Config.CIFAKE_MODEL_DISPLAY_NAMES[
+        Config.HUGGINGFACE_MODEL_NAME
+    ]
+    assert result["preprocessing_description"] == Config.CIFAKE_MODEL_PREPROCESSING[
+        Config.HUGGINGFACE_MODEL_NAME
+    ]
+    assert result["disclaimer"] == Config.HUGGINGFACE_LIMITATION_NOTICE
 
 
 def test_analyze_image_rejects_invalid_upload(
@@ -135,7 +191,7 @@ def test_analyze_image_rejects_invalid_upload(
 ) -> None:
     """Surface validation failures and do not produce analysis artifacts."""
     monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
-    service = DetectionService(model_name="cnn")
+    service = DetectionService()
 
     with pytest.raises(ValidationError, match="extension"):
         service.analyze_image(_upload(filename="document.pdf"), "session-123")
@@ -148,7 +204,7 @@ def test_analyze_image_surfaces_corrupt_image_error(
 ) -> None:
     """Surface corrupt-image domain errors raised by upload validation."""
     monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
-    service = DetectionService(model_name="cnn")
+    service = DetectionService()
     corrupt_upload = FileStorage(
         stream=io.BytesIO(b"\xff\xd8\xff" + b"invalid image data"),
         filename="corrupt.jpg",
@@ -166,7 +222,7 @@ def test_analyze_image_surfaces_model_inference_failure(
     predictor = Mock()
     predictor.predict.side_effect = ModelInferenceError("Inference unavailable.")
     monkeypatch.setattr(detection_service, "Predictor", Mock(return_value=predictor))
-    service = DetectionService(model_name="cnn")
+    service = DetectionService()
 
     with pytest.raises(ModelInferenceError, match="Inference unavailable"):
         service.analyze_image(_upload(), "session-123")

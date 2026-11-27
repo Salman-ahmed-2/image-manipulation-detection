@@ -1,4 +1,4 @@
-# Image Manipulation Detection System Using Deep Learning
+# CIFAKE Real-Photo vs. AI-Generated Image Classifier
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-2.x-000000?logo=flask&logoColor=white)
@@ -6,21 +6,20 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Academic%20Project-blue)
 
-A deep-learning–powered web application that performs **preliminary image authenticity screening** by detecting common manipulation techniques — including copy-move and splicing forgeries — using a custom CNN, MobileNetV2 transfer learning, and Error Level Analysis (ELA) visualization.
+A Flask web application that classifies uploaded images as **Real photo** (`0`) or **AI-generated** (`1`) using either a Custom CNN trained on CIFAKE or a Hugging Face ViT classifier.
 
-> **Disclaimer:** This system is a university semester project intended for educational and research purposes. It provides a preliminary indication of potential manipulation and should **not** be used as conclusive forensic evidence or professional certification.
+> **Limitation Notice:** The CIFAKE CNN recorded **95.3%** accuracy on CIFAKE's 20,000-image held-out test set. That is a dataset-specific benchmark, not expected real-world accuracy. The Hugging Face model also may not generalize to images from newer generators. Neither classifier is a reliable universal AI-image detector.
 
 ---
 
 ## Key Features
 
 - 📤 **Image Upload** — Drag-and-drop or file-picker upload for JPG/JPEG/PNG images (up to 16 MB)
-- 🔍 **Dual-Model Detection** — Custom CNN and MobileNetV2 models trained on CASIA v1.0 and v2.0 datasets
-- 📊 **Confidence Scoring** — Per-class probability breakdown displayed alongside each prediction
-- 🎨 **ELA Visualization** — Error Level Analysis heat-map generated and overlaid on the original image
-- 📋 **Results Dashboard** — Unified view of prediction, confidence, and ELA side-by-side
-- 📄 **PDF Report Download** — Downloadable summary report of the full analysis session
-- ⚡ **Privacy-First** — No permanent storage of user images; temporary files deleted after session ends
+- 🔍 **CIFAKE Custom CNN** — Resizes images to 32×32 RGB (Pillow bilinear resampling, normalized to `[0, 1]`) and classifies them as `Real photo` or `AI-generated`
+- 🤗 **Hugging Face ViT** — Optional second classifier using the pinned `dima806/ai_vs_real_image_detection` model and its own 224×224 image processor. The weights download from Hugging Face on application startup.
+- 📊 **Model Score** — Displays the selected classifier's sigmoid or softmax score for the AI-generated class
+- 📄 **PDF Summary Report** — Downloadable PDF summary including the prediction, score type, and model-specific limitation notice
+- ⚡ **Privacy-First** — No permanent storage of user images; temporary files are cleaned up per session
 - 🌐 **Responsive UI** — Bootstrap 5 frontend, works on desktop and mobile browsers
 
 ---
@@ -30,7 +29,7 @@ A deep-learning–powered web application that performs **preliminary image auth
 | Layer | Technologies |
 |---|---|
 | **Backend** | Python 3.11, Flask 2.x, Werkzeug |
-| **Machine Learning** | TensorFlow 2.x, Keras, scikit-learn |
+| **Machine Learning** | TensorFlow/Keras for CIFAKE CNN; PyTorch/Transformers for the optional Hugging Face ViT |
 | **Image Processing** | OpenCV, Pillow (PIL), NumPy |
 | **Data / Analysis** | Pandas, Matplotlib, SciPy |
 | **Frontend** | HTML5, CSS3, Bootstrap 5, JavaScript (Vanilla) |
@@ -71,24 +70,25 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env to set SECRET_KEY, model paths, etc.
 
-# 5. Train the model in Google Colab (recommended — no local GPU required)
-#    See ## Google Colab Training Workflow below for step-by-step instructions.
-#    After training, download mobilenetv2.keras and place it in artifacts/models/
-
-# 6. Launch the development server
+# 5. Launch the development server
 python run.py
 ```
 
-> **Note:** No model training happens locally. The Flask app loads the pre-trained
-> `artifacts/models/mobilenetv2.keras` file produced by Colab and performs
-> MobileNetV2 inference only. See [Google Colab Training Workflow](#google-colab-training-workflow)
-> for instructions on obtaining the trained model.
+> **Note:** The app loads the CIFAKE CNN from
+> `artifacts/cifake/cifake_training_outputs/models/cifake_custom_cnn.keras`.
+> It also downloads the pinned Hugging Face ViT weights the first time the app
+> starts with network access; downloaded weights are cached by Hugging Face. Choose
+> either model in the upload form. The app does not train either model.
+> Each model uses separate preprocessing, and neither is a universal AI-image detector.
 
 The application will be available at **http://127.0.0.1:5000** by default.
 
 ---
 
-## Google Colab Training Workflow
+## Legacy CASIA MobileNetV2 Training Notes
+
+> These older notebooks train a CASIA tampering detector and do not train either
+> Real-photo-vs-AI model currently available in the app.
 
 Training MobileNetV2 on the full CASIA dataset requires a GPU and several hours of compute time. The recommended approach is to use **Google Colab's free or Pro GPU runtime** via three purpose-built notebooks. No local GPU is needed.
 
@@ -299,7 +299,8 @@ python run.py
 # Visit http://127.0.0.1:5000
 ```
 
-The app will automatically use `artifacts/models/mobilenetv2.keras` for inference. No retraining occurs locally.
+The current app does not use this legacy MobileNetV2 model. It uses the CIFAKE CNN
+or the selectable Hugging Face ViT described above.
 
 ---
 
@@ -466,9 +467,9 @@ flask run --host=0.0.0.0 --port=5000
 1. Open `http://127.0.0.1:5000` in your browser.
 2. Click **Choose File** or drag-and-drop an image onto the upload area.
 3. Supported formats: **JPG, JPEG, PNG** — maximum file size **16 MB**.
-4. Optionally select the detection model (CNN or MobileNetV2).
+4. Optionally select either the CIFAKE Custom CNN or Hugging Face ViT.
 5. Click **Analyse**.
-6. View the prediction label (**Authentic** / **Tampered**), confidence score, and ELA visualisation.
+6. View the prediction label (**Real photo** / **AI-generated**) and model score.
 7. Click **Download PDF Report** to save the full analysis summary.
 
 ### Running Tests

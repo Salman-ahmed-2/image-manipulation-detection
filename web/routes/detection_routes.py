@@ -23,6 +23,8 @@ from config import Config
 from src.services.detection_service import DetectionService
 from src.services.report_service import ReportService
 from src.utils.exceptions import (
+    ModelInferenceError,
+    ModelNotLoadedError,
     PayloadTooLargeError,
     ReportGenerationError,
     ValidationError,
@@ -43,13 +45,19 @@ def _accepts_json() -> bool:
     return request.accept_mimetypes.best == "application/json"
 
 
-def _error_response(message: str, status_code: int, error_code: str) -> Any:
+def _error_response(
+    message: str,
+    status_code: int,
+    error_code: str,
+    error_title: str = "Request Error",
+) -> Any:
     """Return an analysis error in the format requested by the client.
 
     Args:
         message: Human-readable error detail.
         status_code: HTTP status for the response.
         error_code: Machine-readable error identifier.
+        error_title: Heading shown on the HTML error page.
 
     Returns:
         A JSON error response or a rendered HTTP error page.
@@ -66,19 +74,27 @@ def _error_response(message: str, status_code: int, error_code: str) -> Any:
             ),
             status_code,
         )
-    abort(status_code)
+    return (
+        render_template(
+            "error.html",
+            error_code=status_code,
+            error_title=error_title,
+            error_message=message,
+        ),
+        status_code,
+    )
 
 
 @detection_bp.post("/analyze")
 def analyze() -> Any:
-    """Analyze the uploaded image and return HTML or JSON results.
+    """Classify the uploaded image as Real photo or AI-generated.
 
     Returns:
         A rendered results page, JSON analysis response, or error response.
     """
     uploaded_file = request.files.get("image")
     if uploaded_file is None or not uploaded_file.filename:
-        return _error_response("No file selected.", 400, "INVALID_FILE")
+        return _error_response("No file selected.", 400, "INVALID_FILE", "Bad Request")
 
     session_id = session.get("session_id") or str(uuid4())
     model_choice = request.form.get("model") or Config.ACTIVE_MODEL
@@ -91,10 +107,16 @@ def analyze() -> Any:
         )
     except PayloadTooLargeError as error:
         logger.warning("Upload rejected because it exceeds the configured limit.")
-        return _error_response(str(error), 413, "PAYLOAD_TOO_LARGE")
+        return _error_response(str(error), 413, "PAYLOAD_TOO_LARGE", "File Too Large")
     except ValidationError as error:
         logger.warning("Invalid image upload: %s", error)
-        return _error_response(str(error), 400, "INVALID_FILE_TYPE")
+        return _error_response(str(error), 400, "INVALID_FILE_TYPE", "Bad Request")
+    except ModelNotLoadedError as error:
+        logger.error("Model unavailable for analysis: %s", error)
+        return _error_response(str(error), 503, "MODEL_NOT_LOADED", "Model Unavailable")
+    except ModelInferenceError as error:
+        logger.error("Model inference failed: %s", error)
+        return _error_response(str(error), 500, "MODEL_INFERENCE_ERROR", "Inference Failed")
 
     session["session_id"] = session_id
     session["analysis_result"] = result
@@ -104,25 +126,22 @@ def analyze() -> Any:
         session_id=session_id,
         filename=Path(result["original_image_path"]).name,
     )
-    ela_image_url = url_for(
-        "detection.serve_session_image",
-        session_id=session_id,
-        filename=Path(result["ela_image_path"]).name,
-    )
     response_data = {
         "status": "success",
         "session_id": session_id,
         "prediction": {
             "label": result["verdict_label"],
             "verdict_code": result["verdict_code"],
-            "confidence": result["confidence"],
+            "model_score": result["raw_probability"],
             "raw_probability": result["raw_probability"],
             "model_used": result["model_used"],
+            "model_display_name": result["model_display_name"],
+            "score_type": result["score_type"],
         },
         "artifacts": {
             "original_image_url": original_image_url,
-            "ela_image_url": ela_image_url,
         },
+        "limitation_notice": result["disclaimer"],
         "disclaimer": result["disclaimer"],
     }
     if _accepts_json():
@@ -131,10 +150,8 @@ def analyze() -> Any:
     template_context = {
         **result,
         "prediction": result["verdict_label"],
-        "confidence_pct": int(result["confidence"]),
         "model_used": result["model_used"],
         "original_image_url": original_image_url,
-        "ela_image_url": ela_image_url,
         "session_id": session_id,
     }
     return render_template("result.html", **template_context)
@@ -162,7 +179,6 @@ def download_report(session_id: str) -> Any:
         pdf_bytes = ReportService.generate_pdf_report(
             analysis_result,
             Path(analysis_result["original_image_path"]),
-            Path(analysis_result["ela_image_path"]),
         )
     except (KeyError, ReportGenerationError) as error:
         logger.error("Unable to create report for session %s: %s", session_id, error)
@@ -176,7 +192,7 @@ def download_report(session_id: str) -> Any:
         pdf_bytes,
         mimetype="application/pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=forensic_report_{session_id}.pdf"
+            "Content-Disposition": f"attachment; filename=classification_report_{session_id}.pdf"
         },
     )
 
@@ -197,9 +213,9 @@ def serve_session_image(session_id: str, filename: str) -> Any:
         abort(404)
 
     allowed_filenames = {
-        Path(analysis_result[key]).name
-        for key in ("original_image_path", "ela_image_path")
-        if isinstance(analysis_result.get(key), str)
+        Path(analysis_result["original_image_path"]).name
+        for _ in (0,)
+        if isinstance(analysis_result.get("original_image_path"), str)
     }
     if filename not in allowed_filenames:
         abort(404)

@@ -46,18 +46,23 @@ def health() -> Any:
     Returns:
         A JSON response describing the application runtime state.
     """
-    model_names = tuple(
-        name for name in Config.EVALUATION_MODEL_CHOICES if name != "both"
-    )
+    model_names = Config.CIFAKE_SUPPORTED_MODELS
     models_loaded = {
         name: ModelLoader.get_model(name) is not None for name in model_names
     }
+    load_errors = {
+        name: err
+        for name in model_names
+        if (err := ModelLoader.get_load_error(name)) is not None
+    }
+    all_loaded = all(models_loaded.values())
     started_at = current_app.extensions.get("started_at", monotonic())
-    return jsonify(
-        {
-            "status": "healthy",
-            "models_loaded": models_loaded,
-            "active_model": current_app.config.get("ACTIVE_MODEL", Config.ACTIVE_MODEL),
-            "uptime_seconds": max(0, int(monotonic() - started_at)),
-        }
-    )
+    payload: dict[str, Any] = {
+        "status": "healthy" if all_loaded else "degraded",
+        "models_loaded": models_loaded,
+        "active_model": Config.CIFAKE_MODEL_NAME,
+        "uptime_seconds": max(0, int(monotonic() - started_at)),
+    }
+    if load_errors:
+        payload["model_errors"] = load_errors
+    return jsonify(payload)

@@ -144,14 +144,62 @@ class Config:
     MOBILENET_FINE_TUNE_EPOCHS: int = 25
     MOBILENET_EARLY_STOPPING_PATIENCE: int = 5
 
-    ACTIVE_MODEL: str = os.getenv("ACTIVE_MODEL", "mobilenet").lower()
+    ACTIVE_MODEL: str = os.getenv("ACTIVE_MODEL", "cifake_cnn").lower()
     MODEL_PATH_CNN: Path = MODEL_DIR / "cnn_model.keras"
     MODEL_PATH_MOBILENET: Path = MODEL_DIR / "mobilenet_model.keras"
     # Preferred export filename from Colab training (takes precedence over MODEL_PATH_MOBILENET)
     MODEL_PATH_MOBILENET_V2: Path = MODEL_DIR / "mobilenetv2.keras"
-    MODEL_PATH_MOBILENET_V2: Path = MODEL_DIR / "mobilenetv2.keras"
 
-    # Class definitions
+    # CIFAKE Real-vs-AI-Generated classification configuration
+    CIFAKE_MODEL_DIR: Path = ARTIFACTS_DIR / "cifake" / "cifake_training_outputs" / "models"
+    MODEL_PATH_CIFAKE_CNN: Path = CIFAKE_MODEL_DIR / "cifake_custom_cnn.keras"
+    CIFAKE_MODEL_NAME: str = "cifake_cnn"
+    HUGGINGFACE_MODEL_NAME: str = "huggingface_vit"
+    HUGGINGFACE_MODEL_ID: str = "dima806/ai_vs_real_image_detection"
+    HUGGINGFACE_MODEL_REVISION: str = "5d647683672ffd0080441f4e8b4345934c44cc61"
+    CIFAKE_SUPPORTED_MODELS: tuple[str, ...] = (
+        CIFAKE_MODEL_NAME,
+        HUGGINGFACE_MODEL_NAME,
+    )
+    CIFAKE_MODEL_DISPLAY_NAMES: dict[str, str] = {
+        CIFAKE_MODEL_NAME: "CIFAKE Custom CNN",
+        HUGGINGFACE_MODEL_NAME: "Hugging Face ViT (dima806)",
+    }
+    CIFAKE_MODEL_PREPROCESSING: dict[str, str] = {
+        CIFAKE_MODEL_NAME: "32x32 RGB, bilinear resize, pixel values scaled to [0, 1]",
+        HUGGINGFACE_MODEL_NAME: (
+            "224x224 RGB, resized and normalized by the Hugging Face image processor"
+        ),
+    }
+    CIFAKE_MODEL_SCORE_TYPES: dict[str, str] = {
+        CIFAKE_MODEL_NAME: "sigmoid",
+        HUGGINGFACE_MODEL_NAME: "softmax",
+    }
+    CIFAKE_INPUT_SHAPE: Tuple[int, int, int] = (32, 32, 3)
+    CIFAKE_TARGET_SIZE: Tuple[int, int] = (32, 32)
+    CIFAKE_NORMALIZATION_MODE: str = "standard"
+    HUGGINGFACE_INPUT_SHAPE: Tuple[int, int, int] = (224, 224, 3)
+    HUGGINGFACE_TARGET_SIZE: Tuple[int, int] = (224, 224)
+    HUGGINGFACE_LIMITATION_NOTICE: str = (
+        "This third-party model card reports training on an older real-vs-AI dataset and "
+        "warns that newer generators may cause concept drift. Its accuracy on current "
+        "generators and arbitrary real-world images has not been established."
+    )
+    CIFAKE_CLASS_LABELS: dict[int, str] = {
+        0: "Real photo",
+        1: "AI-generated",
+    }
+    CIFAKE_LIMITATION_NOTICE: str = (
+        "Limitation notice: This model was trained and evaluated on CIFAKE's 32x32 "
+        "CIFAR-10-style photos and generated images (95.3% accuracy on CIFAKE's "
+        "20,000-image held-out test set). Its performance on arbitrary real-world "
+        "photos or images from other generators has not been established, and it "
+        "should not be treated as a reliable universal AI-image detector."
+    )
+    CIFAKE_REPORT_TITLE: str = "CIFAKE AI-GENERATED VS. REAL IMAGE CLASSIFIER"
+    CIFAKE_REPORT_SUBTITLE: str = "Automated Classification Summary Report"
+
+    # Class definitions (retained for CASIA dataset/training scripts)
     CLASS_LABELS: dict[int, str] = {
         0: "Authentic",
         1: "Potentially Manipulated",

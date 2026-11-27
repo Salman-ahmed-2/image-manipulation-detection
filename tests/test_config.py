@@ -20,9 +20,29 @@ def test_config_exports_expected_runtime_defaults() -> None:
     assert Config.MAX_IMAGE_PIXELS == 50_000_000
     assert Config.TEMP_FILE_EXPIRY == 1800
     assert Config.INPUT_SHAPE == (224, 224, 3)
+    assert Config.CIFAKE_INPUT_SHAPE == (32, 32, 3)
+    assert Config.CIFAKE_TARGET_SIZE == (32, 32)
+    assert Config.HUGGINGFACE_INPUT_SHAPE == (224, 224, 3)
+    assert Config.HUGGINGFACE_TARGET_SIZE == (224, 224)
+    assert Config.CIFAKE_SUPPORTED_MODELS == (
+        Config.CIFAKE_MODEL_NAME,
+        Config.HUGGINGFACE_MODEL_NAME,
+    )
+    assert Config.HUGGINGFACE_MODEL_ID == "dima806/ai_vs_real_image_detection"
+    assert Config.HUGGINGFACE_MODEL_REVISION == (
+        "5d647683672ffd0080441f4e8b4345934c44cc61"
+    )
+    assert Config.CIFAKE_CLASS_LABELS == {0: "Real photo", 1: "AI-generated"}
+    assert Config.MODEL_PATH_CIFAKE_CNN == (
+        Config.ARTIFACTS_DIR
+        / "cifake"
+        / "cifake_training_outputs"
+        / "models"
+        / "cifake_custom_cnn.keras"
+    )
     assert Config.BATCH_SIZE == 32
     assert Config.DEFAULT_EPOCHS == 50
-    assert Config.ACTIVE_MODEL == "mobilenet"
+    assert Config.ACTIVE_MODEL == "cifake_cnn"
     assert Config.ELA_QUALITY == 90
     assert Config.ELA_ENHANCEMENT_FACTOR == 10.0
     assert Config.ELA_DISCLAIMER == (
