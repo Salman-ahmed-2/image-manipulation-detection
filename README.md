@@ -85,6 +85,16 @@ The application will be available at **http://127.0.0.1:5000** by default.
 
 ---
 
+## Compare the CIFAKE Models
+
+Use [`notebooks/colab/06_cifake_model_comparison.ipynb`](./notebooks/colab/06_cifake_model_comparison.ipynb)
+to evaluate the CIFAKE Custom CNN and the Hugging Face ViT on the same held-out
+CIFAKE test split. It reports accuracy and other metrics without retraining.
+These results measure performance on CIFAKE only and do not establish real-world
+AI-image detection accuracy.
+
+---
+
 ## Legacy CASIA MobileNetV2 Training Notes
 
 > These older notebooks train a CASIA tampering detector and do not train either
