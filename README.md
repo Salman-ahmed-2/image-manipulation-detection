@@ -112,14 +112,20 @@ AI-image detection accuracy.
 
 To further fine-tune only the Hugging Face ViT, use
 [`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real_.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real_.ipynb)
-in Colab. The v5 workflow continues from `ai_vs_real_genimage_outputs_v3.zip`,
-uses the official [GenImage benchmark](https://github.com/GenImage-Dataset/GenImage),
-and can optionally use a CIFAKE training-only folder or ZIP. The notebook documents
-their sources and terms, inventories the actual Drive data, filters exact and
-perceptual duplicates across splits, and keeps ADM for validation and Midjourney
-for final held-out testing. It saves versioned run state and split manifests to
-Drive, selects a validation-only threshold, and exports a ViT-only ZIP containing
-the selected checkpoint, processor, manifests, metrics, and run metadata. Outputs
+in Colab. The v5 workflow continues from `ai_vs_real_genimage_outputs_v3.zip` and
+accepts GenImage ZIP archive(s) uploaded from your computer through Colab's file
+picker. You can upload one combined archive if generator folders are preserved, or
+multiple archives named for their generator (for example `BigGAN.zip` and
+`Midjourney.zip`). Dataset images are staged in Colab's temporary `/content`
+storage, not read from Drive. The notebook can optionally accept a CIFAKE ZIP for
+training only.
+
+It documents dataset sources and terms, inventories archive contents, filters
+exact and perceptual duplicates across splits, and keeps ADM for validation and
+Midjourney for final held-out testing. It saves versioned run state and split
+manifests to Drive, selects a validation-only threshold, and exports a ViT-only ZIP
+containing the selected checkpoint, processor, manifests, metrics, and run metadata.
+Drive is still used for the starting v3 checkpoint and output/resume files. Outputs
 are saved under `My Drive/ai_vs_real_vit_genimage_outputs_v5/`; v3 remains unchanged
 and the app is not switched automatically. A 90% unseen-generator score is not
 guaranteed, and a random or familiar-source split does not establish real-world
