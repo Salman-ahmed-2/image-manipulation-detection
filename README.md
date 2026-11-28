@@ -96,8 +96,11 @@ To further fine-tune both current classifiers, use
 [`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb)
 in Colab. This version continues from `ai_vs_real_finetuning_outputs_v2.zip` and
 uses the official [GenImage benchmark](https://github.com/GenImage-Dataset/GenImage).
-Use the [official shared GenImage Drive folder](https://drive.google.com/drive/folders/1jGt10bwTbhEZuGXLyvrCuxOI0cBqQ1FS?usp=sharing);
-add a shortcut under `My Drive/GenImage` in the same Google account used by Colab.
+Use the [official GenImage folder shared by its owner](https://drive.google.com/drive/folders/1jGt10bwTbhEZuGXLyvrCuxOI0cBqQ1FS?usp=sharing);
+you do not need to own it. Add a shortcut under `My Drive/GenImage` in the same
+Google account used by Colab. If the shared folders contain archives rather than
+the extracted image folders, copy/download and extract the required archives into
+your own Drive; this can require substantial storage.
 The notebook targets 50,000
 real and 50,000 generated training images, validates on ADM, and tests on the
 held-out Midjourney generator with exact-hash duplicate filtering. It exports
