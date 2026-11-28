@@ -155,6 +155,8 @@ artifacts/datasets/*.zip
 
 # The fine-tuned ViT weights are too large for a regular GitHub Git push.
 /artifacts/cifake/ai_vs_real_finetuning_outputs/huggingface_vit/model.safetensors
+/artifacts/cifake/ai_vs_real_finetuning_outputs_v2/
+/artifacts/cifake/ai_vs_real_genimage_outputs_v3/
 
 
 # ------------------------------------------------------------

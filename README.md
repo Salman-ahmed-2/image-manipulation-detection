@@ -8,15 +8,15 @@
 
 A Flask web application that classifies uploaded images as **Real photo** (`0`) or **AI-generated** (`1`) using either a Custom CNN trained on CIFAKE or a Hugging Face ViT classifier.
 
-> **Limitation Notice:** The CIFAKE CNN recorded **95.3%** accuracy on CIFAKE's 20,000-image held-out test set. The fine-tuned ViT scored **78.1%** on a 146-image random test split from its fine-tuning dataset. These dataset-specific results do not establish expected real-world accuracy or performance on unseen generators; neither classifier is a universal AI-image detector.
+> **Limitation Notice:** The active further-fine-tuned CNN scored **49.3%** and the active ViT scored **78.8%** on the same 146-image random test split from their Kaggle fine-tuning dataset. This test split has been used during prior fine-tuning, so these results are not an independent evaluation. Neither score establishes performance on unseen generators or arbitrary real-world images.
 
 ---
 
 ## Key Features
 
 - 📤 **Image Upload** — Drag-and-drop or file-picker upload for JPG/JPEG/PNG images (up to 16 MB)
-- 🔍 **CIFAKE Custom CNN** — Resizes images to 32×32 RGB (Pillow bilinear resampling, normalized to `[0, 1]`) and classifies them as `Real photo` or `AI-generated`
-- 🤗 **Fine-tuned Hugging Face ViT** — Optional second classifier loaded locally from `artifacts/cifake/ai_vs_real_finetuning_outputs/huggingface_vit/` with its matching image processor.
+- 🔍 **Further-fine-tuned CIFAKE CNN** — Resizes images to 32×32 RGB (Pillow bilinear resampling, normalized to `[0, 1]`) and classifies them as `Real photo` or `AI-generated`
+- 🤗 **Further-fine-tuned Hugging Face ViT** — Optional second classifier loaded locally from `artifacts/cifake/ai_vs_real_finetuning_outputs_v2/huggingface_vit/` with its matching image processor.
 - 📊 **Model Score** — Displays the selected classifier's sigmoid or softmax score for the AI-generated class
 - 📄 **PDF Summary Report** — Downloadable PDF summary including the prediction, score type, and model-specific limitation notice
 - ⚡ **Privacy-First** — No permanent storage of user images; temporary files are cleaned up per session
@@ -74,12 +74,11 @@ cp .env.example .env
 python run.py
 ```
 
-> **Note:** The app loads the original CIFAKE CNN from
-> `artifacts/cifake/cifake_training_outputs/models/cifake_custom_cnn.keras`.
-> It loads the fine-tuned ViT from
-> `artifacts/cifake/ai_vs_real_finetuning_outputs/huggingface_vit/`. The fine-tuned
-> CNN scored only 49.3% on its 146-image test split, so it remains inactive.
-> Each model uses separate preprocessing, and neither is a universal AI-image detector.
+> **Note:** The app loads the further-fine-tuned CNN from
+> `artifacts/cifake/ai_vs_real_finetuning_outputs_v2/cnn/` and the matching ViT from
+> `artifacts/cifake/ai_vs_real_finetuning_outputs_v2/huggingface_vit/`. The CNN scored
+> only 49.3% on the 146-image test split, so its predictions may be unreliable. Both
+> models use separate preprocessing, and neither is a universal AI-image detector.
 
 The application will be available at **http://127.0.0.1:5000** by default.
 
@@ -93,13 +92,17 @@ CIFAKE test split. It reports accuracy and other metrics without retraining.
 These results measure performance on CIFAKE only and do not establish real-world
 AI-image detection accuracy.
 
-To further fine-tune both existing classifiers for general AI-vs-real images,
-use [`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb).
-It requires the previous `ai_vs_real_finetuning_outputs.zip` so it can continue
-both the fine-tuned CNN and ViT checkpoints; it downloads the Cashbowman Kaggle
-dataset using KaggleHub, keeps validation and test images separate, and writes
-new checkpoints to a separate `ai_vs_real_finetuning_outputs_v2.zip` without
-overwriting the previous checkpoints or current app models.
+To further fine-tune both current classifiers, use
+[`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb)
+in Colab. This version continues from `ai_vs_real_finetuning_outputs_v2.zip` and
+uses the official [GenImage benchmark](https://github.com/GenImage-Dataset/GenImage).
+Prepare its generator folders in Google Drive first. The notebook targets 50,000
+real and 50,000 generated training images, validates on ADM, and tests on the
+held-out Midjourney generator with exact-hash duplicate filtering. It exports
+`ai_vs_real_genimage_outputs_v3.zip` separately and does not switch the app models
+automatically. A 90% unseen-generator accuracy is not guaranteed; the GenImage
+paper reports roughly 67–70% average cross-generator accuracy for several
+standard detectors.
 
 ---
 

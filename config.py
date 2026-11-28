@@ -151,14 +151,18 @@ class Config:
     MODEL_PATH_MOBILENET_V2: Path = MODEL_DIR / "mobilenetv2.keras"
 
     # CIFAKE Real-vs-AI-Generated classification configuration
-    CIFAKE_MODEL_DIR: Path = ARTIFACTS_DIR / "cifake" / "cifake_training_outputs" / "models"
-    MODEL_PATH_CIFAKE_CNN: Path = CIFAKE_MODEL_DIR / "cifake_custom_cnn.keras"
+    CIFAKE_MODEL_DIR: Path = (
+        ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs_v2" / "cnn"
+    )
+    MODEL_PATH_CIFAKE_CNN: Path = (
+        CIFAKE_MODEL_DIR / "cifake_custom_cnn_ai_vs_real_further_finetuned.keras"
+    )
     CIFAKE_MODEL_NAME: str = "cifake_cnn"
     HUGGINGFACE_MODEL_NAME: str = "huggingface_vit"
     HUGGINGFACE_MODEL_ID: str = "dima806/ai_vs_real_image_detection"
     HUGGINGFACE_MODEL_REVISION: str = "5d647683672ffd0080441f4e8b4345934c44cc61"
     HUGGINGFACE_FINETUNED_MODEL_DIR: Path = (
-        ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs" / "huggingface_vit"
+        ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs_v2" / "huggingface_vit"
     )
     CIFAKE_SUPPORTED_MODELS: tuple[str, ...] = (
         CIFAKE_MODEL_NAME,
@@ -184,21 +188,22 @@ class Config:
     HUGGINGFACE_INPUT_SHAPE: Tuple[int, int, int] = (224, 224, 3)
     HUGGINGFACE_TARGET_SIZE: Tuple[int, int] = (224, 224)
     HUGGINGFACE_LIMITATION_NOTICE: str = (
-        "This ViT was fine-tuned on a Kaggle real-vs-AI image dataset. It scored 78.1% "
-        "accuracy on a 146-image random held-out split from that dataset; this small "
-        "same-source evaluation does not establish accuracy on unseen generators or "
-        "arbitrary real-world images."
+        "This ViT was further fine-tuned on a Kaggle real-vs-AI image dataset. It scored "
+        "78.8% accuracy on a 146-image random test split from that dataset. This split "
+        "has been used during prior fine-tuning, so it is not an independent evaluation "
+        "and does not establish accuracy on unseen generators or arbitrary real-world images."
     )
     CIFAKE_CLASS_LABELS: dict[int, str] = {
         0: "Real photo",
         1: "AI-generated",
     }
     CIFAKE_LIMITATION_NOTICE: str = (
-        "Limitation notice: This model was trained and evaluated on CIFAKE's 32x32 "
-        "CIFAR-10-style photos and generated images (95.3% accuracy on CIFAKE's "
-        "20,000-image held-out test set). Its performance on arbitrary real-world "
-        "photos or images from other generators has not been established, and it "
-        "should not be treated as a reliable universal AI-image detector."
+        "Limitation notice: This CIFAKE CNN was further fine-tuned on a Kaggle "
+        "real-vs-AI image dataset and scored 49.3% accuracy on its 146-image random "
+        "test split. This split has been used during prior fine-tuning, so this is not "
+        "an independent evaluation. Its performance on unseen generators or arbitrary "
+        "real-world images has not been established; do not treat it as a reliable "
+        "universal AI-image detector."
     )
     CIFAKE_REPORT_TITLE: str = "CIFAKE AI-GENERATED VS. REAL IMAGE CLASSIFIER"
     CIFAKE_REPORT_SUBTITLE: str = "Automated Classification Summary Report"

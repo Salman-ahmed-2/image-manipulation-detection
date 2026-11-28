@@ -33,15 +33,18 @@ def test_config_exports_expected_runtime_defaults() -> None:
         "5d647683672ffd0080441f4e8b4345934c44cc61"
     )
     assert Config.HUGGINGFACE_FINETUNED_MODEL_DIR == (
-        Config.ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs" / "huggingface_vit"
+        Config.ARTIFACTS_DIR
+        / "cifake"
+        / "ai_vs_real_finetuning_outputs_v2"
+        / "huggingface_vit"
     )
     assert Config.CIFAKE_CLASS_LABELS == {0: "Real photo", 1: "AI-generated"}
     assert Config.MODEL_PATH_CIFAKE_CNN == (
         Config.ARTIFACTS_DIR
         / "cifake"
-        / "cifake_training_outputs"
-        / "models"
-        / "cifake_custom_cnn.keras"
+        / "ai_vs_real_finetuning_outputs_v2"
+        / "cnn"
+        / "cifake_custom_cnn_ai_vs_real_further_finetuned.keras"
     )
     assert Config.BATCH_SIZE == 32
     assert Config.DEFAULT_EPOCHS == 50
