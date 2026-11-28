@@ -1,0 +1,60 @@
+{
+  "dataset": "cashbowman/ai-generated-images-vs-real-images",
+  "label_mapping": {
+    "REAL": 0,
+    "AI-generated": 1
+  },
+  "split_sizes": {
+    "train": 681,
+    "validation": 146,
+    "test": 146
+  },
+  "starting_cnn_checkpoint": "cifake_custom_cnn.keras",
+  "huggingface_model": "dima806/ai_vs_real_image_detection",
+  "huggingface_revision": "5d647683672ffd0080441f4e8b4345934c44cc61",
+  "results": {
+    "cifake_custom_cnn": {
+      "n": 146,
+      "real_count": 65,
+      "ai_generated_count": 81,
+      "threshold": 0.5,
+      "accuracy": 0.4931506849315068,
+      "precision": 0.6296296296296297,
+      "recall": 0.20987654320987653,
+      "f1_score": 0.3148148148148148,
+      "roc_auc": 0.6412155745489079,
+      "confusion_matrix_labels_0_1": [
+        [
+          55,
+          10
+        ],
+        [
+          64,
+          17
+        ]
+      ]
+    },
+    "huggingface_vit": {
+      "n": 146,
+      "real_count": 65,
+      "ai_generated_count": 81,
+      "threshold": 0.5,
+      "accuracy": 0.7808219178082192,
+      "precision": 0.7816091954022989,
+      "recall": 0.8395061728395061,
+      "f1_score": 0.8095238095238095,
+      "roc_auc": 0.8774928774928774,
+      "confusion_matrix_labels_0_1": [
+        [
+          46,
+          19
+        ],
+        [
+          13,
+          68
+        ]
+      ]
+    }
+  },
+  "warning": "Metrics apply only to this random held-out split from one dataset. The test split may contain images from the same sources or generators as training; evaluate on separate unseen sources and generators before claiming generalization."
+}

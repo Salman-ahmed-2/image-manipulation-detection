@@ -157,13 +157,16 @@ class Config:
     HUGGINGFACE_MODEL_NAME: str = "huggingface_vit"
     HUGGINGFACE_MODEL_ID: str = "dima806/ai_vs_real_image_detection"
     HUGGINGFACE_MODEL_REVISION: str = "5d647683672ffd0080441f4e8b4345934c44cc61"
+    HUGGINGFACE_FINETUNED_MODEL_DIR: Path = (
+        ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs" / "huggingface_vit"
+    )
     CIFAKE_SUPPORTED_MODELS: tuple[str, ...] = (
         CIFAKE_MODEL_NAME,
         HUGGINGFACE_MODEL_NAME,
     )
     CIFAKE_MODEL_DISPLAY_NAMES: dict[str, str] = {
         CIFAKE_MODEL_NAME: "CIFAKE Custom CNN",
-        HUGGINGFACE_MODEL_NAME: "Hugging Face ViT (dima806)",
+        HUGGINGFACE_MODEL_NAME: "Fine-tuned Hugging Face ViT",
     }
     CIFAKE_MODEL_PREPROCESSING: dict[str, str] = {
         CIFAKE_MODEL_NAME: "32x32 RGB, bilinear resize, pixel values scaled to [0, 1]",
@@ -181,9 +184,10 @@ class Config:
     HUGGINGFACE_INPUT_SHAPE: Tuple[int, int, int] = (224, 224, 3)
     HUGGINGFACE_TARGET_SIZE: Tuple[int, int] = (224, 224)
     HUGGINGFACE_LIMITATION_NOTICE: str = (
-        "This third-party model card reports training on an older real-vs-AI dataset and "
-        "warns that newer generators may cause concept drift. Its accuracy on current "
-        "generators and arbitrary real-world images has not been established."
+        "This ViT was fine-tuned on a Kaggle real-vs-AI image dataset. It scored 78.1% "
+        "accuracy on a 146-image random held-out split from that dataset; this small "
+        "same-source evaluation does not establish accuracy on unseen generators or "
+        "arbitrary real-world images."
     )
     CIFAKE_CLASS_LABELS: dict[int, str] = {
         0: "Real photo",

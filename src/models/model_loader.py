@@ -115,7 +115,7 @@ class ModelLoader:
 
     @classmethod
     def _load_huggingface_model(cls) -> None:
-        """Load the pinned Hugging Face ViT and its matching processor."""
+        """Load the local fine-tuned Hugging Face ViT and its matching processor."""
         name = Config.HUGGINGFACE_MODEL_NAME
         cls._registry.pop(name, None)
         cls._load_errors.pop(name, None)
@@ -134,18 +134,23 @@ class ModelLoader:
             return
 
         try:
+            model_path = Path(Config.HUGGINGFACE_FINETUNED_MODEL_DIR)
+            if not model_path.is_dir():
+                raise FileNotFoundError(
+                    f"Fine-tuned Hugging Face model directory not found at '{model_path}'. "
+                    "Restore the extracted AI-vs-real fine-tuning output before starting the app."
+                )
             logger.info(
-                "Loading Hugging Face model '%s' at revision %s...",
-                Config.HUGGINGFACE_MODEL_ID,
-                Config.HUGGINGFACE_MODEL_REVISION,
+                "Loading fine-tuned Hugging Face model from %s...",
+                model_path,
             )
             processor = AutoImageProcessor.from_pretrained(
-                Config.HUGGINGFACE_MODEL_ID,
-                revision=Config.HUGGINGFACE_MODEL_REVISION,
+                str(model_path),
+                local_files_only=True,
             )
             model = AutoModelForImageClassification.from_pretrained(
-                Config.HUGGINGFACE_MODEL_ID,
-                revision=Config.HUGGINGFACE_MODEL_REVISION,
+                str(model_path),
+                local_files_only=True,
                 use_safetensors=True,
             )
             classifier = HuggingFaceImageClassifier(model, processor)
@@ -156,8 +161,8 @@ class ModelLoader:
             logger.info("Hugging Face model '%s' loaded on CPU.", name)
         except Exception as exc:  # noqa: BLE001
             message = (
-                f"Failed to load Hugging Face model '{Config.HUGGINGFACE_MODEL_ID}' "
-                f"at revision '{Config.HUGGINGFACE_MODEL_REVISION}': {exc}"
+                f"Failed to load fine-tuned Hugging Face model from "
+                f"'{Config.HUGGINGFACE_FINETUNED_MODEL_DIR}': {exc}"
             )
             logger.error(message)
             cls._load_errors[name] = message
