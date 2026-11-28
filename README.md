@@ -112,20 +112,18 @@ AI-image detection accuracy.
 
 To further fine-tune only the Hugging Face ViT, use
 [`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real_.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real_.ipynb)
-in Colab. This version continues from `ai_vs_real_genimage_outputs_v3.zip` and
-uses the official [GenImage benchmark](https://github.com/GenImage-Dataset/GenImage).
-Use the [official GenImage folder shared by its owner](https://drive.google.com/drive/folders/1jGt10bwTbhEZuGXLyvrCuxOI0cBqQ1FS?usp=sharing);
-you do not need to own it. Add a shortcut under `My Drive/GenImage` in the same
-Google account used by Colab. If the shared folders contain archives rather than
-the extracted image folders, copy/download and extract the required archives into
-your own Drive; this can require substantial storage.
-The notebook targets 50,000 real and 50,000 generated training images. It balances
-generated training images across six generators, validates on ADM, and tests on the
-held-out Midjourney generator with exact-hash duplicate filtering. It exports
-`ai_vs_real_vit_genimage_outputs_v4.zip` separately and does not switch the app
-models automatically. A 90% unseen-generator accuracy is not guaranteed; the
-GenImage paper reports roughly 67–70% average cross-generator accuracy for several
-standard detectors.
+in Colab. The v5 workflow continues from `ai_vs_real_genimage_outputs_v3.zip`,
+uses the official [GenImage benchmark](https://github.com/GenImage-Dataset/GenImage),
+and can optionally use a CIFAKE training-only folder or ZIP. The notebook documents
+their sources and terms, inventories the actual Drive data, filters exact and
+perceptual duplicates across splits, and keeps ADM for validation and Midjourney
+for final held-out testing. It saves versioned run state and split manifests to
+Drive, selects a validation-only threshold, and exports a ViT-only ZIP containing
+the selected checkpoint, processor, manifests, metrics, and run metadata. Outputs
+are saved under `My Drive/ai_vs_real_vit_genimage_outputs_v5/`; v3 remains unchanged
+and the app is not switched automatically. A 90% unseen-generator score is not
+guaranteed, and a random or familiar-source split does not establish real-world
+generalization.
 
 ---
 
