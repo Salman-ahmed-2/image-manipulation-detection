@@ -45,23 +45,39 @@ class ReportService:
         del ela_image_path
         try:
             verdict = str(results_data["verdict_label"])
-            raw_probability = float(
-                results_data.get("raw_probability", 0.0)
+            raw_probability_value = results_data.get("raw_probability")
+            raw_probability = (
+                float(raw_probability_value)
+                if raw_probability_value is not None
+                else None
             )
             supported_verdicts = tuple(Config.CIFAKE_CLASS_LABELS.values())
             if verdict not in supported_verdicts:
                 raise ValueError(f"Unsupported report verdict: {verdict}.")
-            if not isfinite(raw_probability) or not 0.0 <= raw_probability <= 1.0:
+            if raw_probability is not None and (
+                not isfinite(raw_probability) or not 0.0 <= raw_probability <= 1.0
+            ):
                 raise ValueError("Model score must be a finite probability from 0 to 1.")
 
-            model_used = str(results_data["model_used"])
-            model_display_name = Config.CIFAKE_MODEL_DISPLAY_NAMES.get(
-                model_used, model_used
+            model_used = str(results_data.get("model_used") or "verified_c2pa")
+            model_display_name = str(
+                results_data.get("model_display_name")
+                or Config.CIFAKE_MODEL_DISPLAY_NAMES.get(model_used, model_used)
             )
-            preprocessing_description = Config.CIFAKE_MODEL_PREPROCESSING.get(
-                model_used, "Model-specific preprocessing"
+            preprocessing_description = str(
+                results_data.get("preprocessing_description")
+                or Config.CIFAKE_MODEL_PREPROCESSING.get(
+                    model_used, "Model-specific preprocessing"
+                )
             )
-            score_type = Config.CIFAKE_MODEL_SCORE_TYPES.get(model_used, "model")
+            score_type = results_data.get("score_type") or Config.CIFAKE_MODEL_SCORE_TYPES.get(
+                model_used, "model"
+            )
+            classification_source = str(results_data.get("classification_source", "model"))
+            metadata_assessment = results_data.get("metadata_assessment", {})
+            metadata_clues = metadata_assessment.get("metadata_clues", [])
+            if not isinstance(metadata_clues, list):
+                raise ValueError("Metadata clues must be provided as a list.")
             limitation_notice = str(
                 results_data.get("disclaimer", Config.CIFAKE_LIMITATION_NOTICE)
             )
@@ -107,7 +123,8 @@ class ReportService:
             verdict_color = (35, 100, 55) if is_real else (150, 35, 35)
             pdf.set_fill_color(242, 245, 248)
             summary_y = pdf.get_y()
-            pdf.rect(10, summary_y, page_width, 24, style="F")
+            summary_height = 30 if raw_probability is None else 24
+            pdf.rect(10, summary_y, page_width, summary_height, style="F")
             pdf.set_xy(14, summary_y + 3)
             pdf.set_text_color(*verdict_color)
             pdf.set_font("Helvetica", "B", 13)
@@ -120,13 +137,20 @@ class ReportService:
             )
             pdf.set_x(14)
             pdf.set_font("Helvetica", "B", 10)
-            pdf.cell(
-                page_width - 8,
-                7,
-                f"AI-generated score ({score_type}): {raw_probability:.4f}",
-            )
+            if raw_probability is not None:
+                pdf.cell(
+                    page_width - 8,
+                    7,
+                    f"AI-generated score ({score_type}): {raw_probability:.4f}",
+                )
+            else:
+                pdf.cell(
+                    page_width - 8,
+                    7,
+                    "Decision basis: Trusted C2PA AI-origin assertion",
+                )
             pdf.set_text_color(0, 0, 0)
-            pdf.set_xy(10, summary_y + 28)
+            pdf.set_xy(10, summary_y + (34 if raw_probability is None else 28))
 
             pdf.set_font("Helvetica", "B", 10)
             pdf.cell(0, 7, "UPLOADED IMAGE", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
@@ -170,9 +194,20 @@ class ReportService:
                 f"Color channels: {original_channels}",
                 f"Input size: {input_size_mb:.2f} MB",
                 f"Model used: {model_display_name}",
+                f"Classification source: {classification_source}",
                 f"Preprocessing: {preprocessing_description}",
-                f"Score type: {score_type}",
-                f"Decision threshold: {Config.CLASSIFICATION_THRESHOLD}",
+                *(
+                    (
+                        f"Score type: {score_type}",
+                        f"Decision threshold: {Config.CLASSIFICATION_THRESHOLD}",
+                    )
+                    if raw_probability is not None
+                    else ()
+                ),
+                "C2PA validation state: "
+                f"{metadata_assessment.get('c2pa_validation_state', 'unknown')}",
+                "Unverified metadata clues: "
+                + ("; ".join(metadata_clues) or "None found"),
             )
             for item in metadata:
                 pdf.multi_cell(

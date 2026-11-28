@@ -1,11 +1,71 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const tooltipTriggers = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-  if (typeof bootstrap !== "undefined") {
-    tooltipTriggers.forEach((element) => new bootstrap.Tooltip(element));
+  const renderIcons = () => {
+    if (typeof lucide !== "undefined" && typeof lucide.createIcons === "function") {
+      lucide.createIcons();
+    }
+  };
+  renderIcons();
+
+  // Sticky navbar scroll state
+  const navbar = document.getElementById("siteNavbar");
+  if (navbar) {
+    const syncNavbarScroll = () => {
+      navbar.classList.toggle("is-scrolled", window.scrollY > 12);
+    };
+    syncNavbarScroll();
+    window.addEventListener("scroll", syncNavbarScroll, { passive: true });
   }
 
+  // Light / deep-plum dark theme toggle
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle instanceof HTMLButtonElement) {
+    const syncThemeIcons = () => {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const darkIcon = themeToggle.querySelector(".theme-icon-dark");
+      const lightIcon = themeToggle.querySelector(".theme-icon-light");
+      if (darkIcon && lightIcon) {
+        darkIcon.classList.toggle("d-none", isDark);
+        lightIcon.classList.toggle("d-none", !isDark);
+      }
+      themeToggle.setAttribute("aria-pressed", String(isDark));
+    };
+
+    syncThemeIcons();
+    themeToggle.addEventListener("click", () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try {
+        localStorage.setItem("cifake-theme", next);
+      } catch (e) {}
+      syncThemeIcons();
+    });
+  }
+
+  // Scroll reveal (triggers once per element)
+  const revealTargets = document.querySelectorAll("[data-reveal]");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (revealTargets.length > 0) {
+    if (reducedMotion || typeof IntersectionObserver === "undefined") {
+      revealTargets.forEach((el) => el.classList.add("is-visible"));
+    } else {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: "0px 0px -24px 0px" },
+      );
+      revealTargets.forEach((el) => observer.observe(el));
+    }
+  }
+
+  // Results dashboard interactions
   const resultsDashboard = document.getElementById("resultsDashboard");
   if (resultsDashboard) {
     const inspectToggle = document.getElementById("imageInspectToggle");
@@ -17,8 +77,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const inspecting = resultsDashboard.classList.toggle("is-inspecting");
         inspectToggle.setAttribute("aria-pressed", String(inspecting));
         inspectToggle.innerHTML = inspecting
-          ? '<i class="bi bi-aspect-ratio me-2" aria-hidden="true"></i>Fit images to cards'
-          : '<i class="bi bi-zoom-in me-2" aria-hidden="true"></i>Inspect at full resolution';
+          ? '<i data-lucide="minimize-2" width="15" height="15" stroke-width="1.75" aria-hidden="true"></i>Fit image to frame'
+          : '<i data-lucide="zoom-in" width="15" height="15" stroke-width="1.75" aria-hidden="true"></i>Inspect at full resolution';
+        renderIcons();
       });
     }
 
@@ -38,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Upload form & drop zone interactions
   const uploadForm = document.getElementById("uploadForm");
   if (!uploadForm) {
     return;
@@ -124,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
     reader.addEventListener("error", () => {
       if (fileInput.files?.[0] === file) {
         clearPreview();
-        showError("This image could not be read. Please choose another file.");
+        showError("We couldn't read that image file. Please try another JPEG or PNG.");
       }
     });
     reader.readAsDataURL(file);
@@ -135,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!allowedExtensions.has(extension)) {
       const extensions = [...allowedExtensions].map((item) => `.${item}`).join(", ");
       clearPreview();
-      showError(`Unsupported file type. Choose an image with one of these extensions: ${extensions}.`);
+      showError(`That file type isn't supported. Please choose a ${extensions} image.`);
       return false;
     }
 
@@ -143,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
     previewFile(file);
 
     if (file.size > maxFileSize) {
-      showError(`This image exceeds the maximum upload size of ${formatFileSize(maxFileSize)}.`);
+      showError(`That image is a bit too large. Please keep uploads under ${formatFileSize(maxFileSize)}.`);
       return false;
     }
 
@@ -229,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const file = fileInput.files?.[0];
     if (!file) {
       event.preventDefault();
-      showError("Choose an image before starting the analysis.");
+      showError("Please choose a JPEG or PNG image before classifying.");
       return;
     }
     if (!validateFile(file)) {
@@ -239,7 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearError();
     submitButton.disabled = true;
-    submitButtonText.textContent = "Analyzing...";
+    submitButtonText.textContent = "Classifying...";
     submitSpinner.classList.remove("d-none");
     loadingOverlay.classList.remove("d-none");
     loadingOverlay.setAttribute("aria-hidden", "false");

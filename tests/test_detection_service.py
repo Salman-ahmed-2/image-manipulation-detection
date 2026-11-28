@@ -16,6 +16,7 @@ from config import Config
 from src.services import detection_service
 from src.services.detection_service import DetectionService
 from src.utils.exceptions import CorruptImageError, ModelInferenceError, ValidationError
+from src.utils.image_metadata import MetadataAssessment
 
 
 class StubPredictor:
@@ -133,6 +134,8 @@ def test_analyze_image_returns_prediction_paths_and_limitation_notice(
     assert result["latency_ms"] >= 0
     assert result["disclaimer"] == Config.CIFAKE_LIMITATION_NOTICE
     assert result["timestamp"]
+    assert "stage1_result" in result
+    assert result["stage1_result"]["status"] == "no_signal"
     assert len(predictors) == 1
     assert predictors[-1].tensor is not None
     assert predictors[-1].tensor.shape == (1, *Config.CIFAKE_INPUT_SHAPE)
@@ -186,6 +189,69 @@ def test_analyze_image_uses_huggingface_processor_path(
     assert result["disclaimer"] == Config.HUGGINGFACE_LIMITATION_NOTICE
 
 
+def test_trusted_c2pa_ai_claim_skips_model_inference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A trusted AI-origin claim produces a provenance result without a model score."""
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
+    predictors: list[StubPredictor] = []
+
+    def create_predictor(model_name: str) -> StubPredictor:
+        predictor = StubPredictor(model_name)
+        predictors.append(predictor)
+        return predictor
+
+    monkeypatch.setattr(detection_service, "Predictor", create_predictor)
+    monkeypatch.setattr(
+        detection_service,
+        "inspect_image_metadata",
+        lambda path: MetadataAssessment("Trusted", True, ()),
+    )
+
+    result = DetectionService().analyze_image(_upload(), "session-c2pa")
+
+    assert result["verdict_label"] == "AI-generated"
+    assert result["classification_source"] == "verified_c2pa"
+    assert result["raw_probability"] is None
+    assert result["model_used"] is None
+    assert result["metadata_assessment"]["c2pa_validation_state"] == "Trusted"
+    assert predictors[0].tensor is None
+    assert predictors[0].image is None
+
+
+def test_untrusted_c2pa_claim_still_runs_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A valid but untrusted claim and EXIF clues do not bypass model inference."""
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
+    predictors: list[StubPredictor] = []
+
+    def create_predictor(model_name: str) -> StubPredictor:
+        predictor = StubPredictor(model_name)
+        predictors.append(predictor)
+        return predictor
+
+    monkeypatch.setattr(detection_service, "Predictor", create_predictor)
+    monkeypatch.setattr(
+        detection_service,
+        "inspect_image_metadata",
+        lambda path: MetadataAssessment(
+            "Valid",
+            False,
+            ("Metadata mentions ComfyUI (unverified).",),
+        ),
+    )
+
+    result = DetectionService().analyze_image(_upload(), "session-untrusted-c2pa")
+
+    assert result["classification_source"] == "model"
+    assert result["raw_probability"] == 0.942
+    assert result["metadata_assessment"]["metadata_clues"] == [
+        "Metadata mentions ComfyUI (unverified)."
+    ]
+    assert predictors[0].tensor is not None
+
+
 def test_analyze_image_rejects_invalid_upload(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -226,3 +292,38 @@ def test_analyze_image_surfaces_model_inference_failure(
 
     with pytest.raises(ModelInferenceError, match="Inference unavailable"):
         service.analyze_image(_upload(), "session-123")
+
+
+def test_stage1_strong_metadata_shortcircuits_model_inference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Strong PNG generation metadata skips Stage 2 ML inference."""
+    from PIL import PngImagePlugin
+
+    monkeypatch.setattr(Config, "UPLOAD_FOLDER", tmp_path)
+    predictors: list[StubPredictor] = []
+
+    def create_predictor(model_name: str) -> StubPredictor:
+        predictor = StubPredictor(model_name)
+        predictors.append(predictor)
+        return predictor
+
+    monkeypatch.setattr(detection_service, "Predictor", create_predictor)
+
+    buffer = io.BytesIO()
+    png_info = PngImagePlugin.PngInfo()
+    png_info.add_text("parameters", "Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 123")
+    Image.new("RGB", (18, 12), color=(30, 80, 120)).save(buffer, format="PNG", pnginfo=png_info)
+    buffer.seek(0)
+    upload = FileStorage(stream=buffer, filename="sd.png")
+
+    result = DetectionService().analyze_image(upload, "session-stage1")
+
+    assert result["classification_source"] == "metadata"
+    assert result["verdict_label"] == "AI-generated"
+    assert result["raw_probability"] is None
+    assert result["model_used"] is None
+    assert result["disclaimer"] == Config.STAGE1_METADATA_NOTICE
+    assert result["stage1_result"]["route_to_stage2"] is False
+    assert predictors[0].tensor is None
+    assert predictors[0].image is None

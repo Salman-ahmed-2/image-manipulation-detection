@@ -307,11 +307,16 @@ Handles all ML analysis, report generation, and system health routes. This is wh
 1. Extract file from `request.files['image']`
 2. Validate file (via `FileValidator`)
 3. Apply `secure_filename()` and save to temp folder
-4. Load and preprocess image (via `ImagePreprocessor`)
-5. Run ELA (via `ELAGenerator`)
-6. Run ML prediction (via `Predictor`)
-7. Store results and file paths in Flask session
-8. Render `result.html` with results data
+4. Inspect C2PA credentials and EXIF/XMP metadata
+5. If C2PA is `Trusted` and asserts an AI-origin action, return that provenance finding
+   without running the classifier; otherwise continue with the selected model
+6. Store results and file paths in Flask session
+7. Render `result.html` with results data
+
+`C2PA_TRUST_ANCHORS_PATH` may point to a PEM trust list. If it is unset, missing, or
+cannot be used, a C2PA claim is not treated as trusted and classifier inference runs.
+EXIF/XMP generator strings and generator names found in the active C2PA manifest are
+shown as clues only and never bypass inference. Parsed nested XMP fields are scanned.
 
 **On success:** Renders `result.html` (200 OK)
 **On validation failure:** Flash error message, redirect to `/` (302)
@@ -392,13 +397,23 @@ If the client sends `Accept: application/json` (for API/AJAX use), the route ret
 ```json
 {
   "status": "success",
-  "prediction": "authentic",
-  "confidence": 0.924,
-  "model_used": "MobileNetV2",
-  "ela_image_url": "/temp/ela/abc123_ela.png",
+  "prediction": {
+    "label": "AI-generated",
+    "raw_probability": null,
+    "classification_source": "verified_c2pa"
+  },
+  "metadata_assessment": {
+    "c2pa_validation_state": "Trusted",
+    "has_trusted_ai_claim": true,
+    "metadata_clues": []
+  },
   "session_id": "abc123-uuid-here"
 }
 ```
+
+For model-based results, `raw_probability` contains the model score and
+`classification_source` is `"model"`. For verified C2PA results, model score fields
+are `null`; the route does not fabricate a confidence score.
 
 ### Response (Error)
 

@@ -31,6 +31,11 @@ The user interface guides users through three primary actions:
 
 All pages share a common `base.html` layout and follow a consistent Bootstrap 5 visual language.
 
+The results page distinguishes classifier predictions from trusted C2PA provenance
+findings. A trusted C2PA AI-origin assertion is shown without a model confidence
+score because inference was skipped. EXIF/XMP generator strings are shown separately
+as unverified clues and do not replace the classifier result.
+
 ---
 
 ## 2. Technology Stack

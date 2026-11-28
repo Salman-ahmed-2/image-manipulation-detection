@@ -12,6 +12,8 @@ from flask import Flask, render_template
 from flask.testing import FlaskClient
 
 from config import Config
+from src.services import detection_service
+from src.utils.image_metadata import MetadataAssessment
 
 
 def test_home_page_returns_ok(client: FlaskClient) -> None:
@@ -132,11 +134,71 @@ def test_analyze_valid_synthetic_image_returns_json(
     assert body["prediction"]["model_used"] == Config.CIFAKE_MODEL_NAME
     assert body["artifacts"]["original_image_url"].startswith("/static/temp/")
     assert "ela_image_url" not in body["artifacts"]
+    assert "stage1_result" in body
+    assert body["stage1_result"]["status"] == "no_signal"
     assert body["limitation_notice"] == Config.CIFAKE_LIMITATION_NOTICE
     original_response = client.get(body["artifacts"]["original_image_url"])
     assert original_response.status_code == 200
     assert original_response.mimetype == "image/jpeg"
     mock_predictor.assert_called_once()
+
+
+def test_trusted_c2pa_result_has_no_model_score(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+    mock_predictor: Mock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return provenance evidence without inventing a model confidence score."""
+    monkeypatch.setattr(
+        detection_service,
+        "inspect_image_metadata",
+        lambda image_path: MetadataAssessment("Trusted", True, ()),
+    )
+
+    response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["prediction"]["label"] == "AI-generated"
+    assert body["prediction"]["classification_source"] == "verified_c2pa"
+    assert body["prediction"]["raw_probability"] is None
+    assert body["metadata_assessment"]["has_trusted_ai_claim"] is True
+    assert body["limitation_notice"] == Config.C2PA_PROVENANCE_NOTICE
+    mock_predictor.assert_not_called()
+
+
+def test_trusted_c2pa_html_does_not_render_a_model_score(
+    client: FlaskClient,
+    synthetic_jpeg_bytes: bytes,
+    mock_predictor: Mock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Render a provenance-specific result without presenting a fake confidence."""
+    monkeypatch.setattr(
+        detection_service,
+        "inspect_image_metadata",
+        lambda image_path: MetadataAssessment("Trusted", True, ()),
+    )
+
+    response = client.post(
+        "/analyze",
+        data={"image": (BytesIO(synthetic_jpeg_bytes), "synthetic.jpg")},
+        content_type="multipart/form-data",
+        headers={"Accept": "text/html"},
+    )
+
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "Verified provenance result" in page
+    assert "C2PA Validation" in page
+    assert "0.0000" not in page
+    mock_predictor.assert_not_called()
 
 
 def test_analyze_with_huggingface_model_returns_real_vs_ai_result(
@@ -166,6 +228,37 @@ def test_analyze_with_huggingface_model_returns_real_vs_ai_result(
     assert body["limitation_notice"] == Config.HUGGINGFACE_LIMITATION_NOTICE
 
 
+def test_stage1_metadata_shortcircuit_via_api(
+    client: FlaskClient,
+    mock_predictor: Mock,
+) -> None:
+    """Uploading a PNG with Stable Diffusion metadata short-circuits Stage 2."""
+    from PIL import Image, PngImagePlugin
+
+    buf = BytesIO()
+    info = PngImagePlugin.PngInfo()
+    info.add_text("parameters", "Steps: 25, Sampler: Euler a, CFG scale: 7")
+    Image.new("RGB", (32, 32), color=(10, 20, 30)).save(buf, format="PNG", pnginfo=info)
+    buf.seek(0)
+
+    response = client.post(
+        "/analyze",
+        data={"image": (buf, "sd_gen.png")},
+        content_type="multipart/form-data",
+        headers={"Accept": "application/json"},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["prediction"]["label"] == "AI-generated"
+    assert body["prediction"]["classification_source"] == "metadata"
+    assert body["prediction"]["raw_probability"] is None
+    assert body["stage1_result"]["status"] == "ai_detected"
+    assert body["stage1_result"]["route_to_stage2"] is False
+    assert body["limitation_notice"] == Config.STAGE1_METADATA_NOTICE
+    mock_predictor.assert_not_called()
+
+
 def test_analyze_valid_synthetic_image_renders_html(
     client: FlaskClient,
     synthetic_jpeg_bytes: bytes,
@@ -191,6 +284,7 @@ def test_analyze_valid_synthetic_image_renders_html(
     assert Config.CIFAKE_LIMITATION_NOTICE in html.unescape(page)
     assert "Download PDF Report" in page
     assert "0.9340" in page
+    assert "Why we think this" in page
     assert "Error Level Analysis" not in page
     mock_predictor.assert_called_once()
 

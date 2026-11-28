@@ -10,7 +10,9 @@ transformers>=4.39.3,<5
 
 # Computer Vision & Image Processing
 pillow>=10.2.0
+defusedxml>=0.7.1
 opencv-python-headless>=4.9.0
+c2pa-python>=0.39.0
 
 # Scientific Computing & Data Analysis
 numpy>=1.24.3

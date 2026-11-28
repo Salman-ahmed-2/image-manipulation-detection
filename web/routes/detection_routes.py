@@ -137,7 +137,10 @@ def analyze() -> Any:
             "model_used": result["model_used"],
             "model_display_name": result["model_display_name"],
             "score_type": result["score_type"],
+            "classification_source": result["classification_source"],
         },
+        "metadata_assessment": result["metadata_assessment"],
+        "stage1_result": result.get("stage1_result"),
         "artifacts": {
             "original_image_url": original_image_url,
         },

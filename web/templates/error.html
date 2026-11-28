@@ -3,35 +3,38 @@
 {% block title %}{{ error_code }} · {{ error_title }}{% endblock %}
 
 {% block content %}
-<section class="error-page text-center mx-auto" aria-labelledby="errorTitle">
-  <div class="error-icon mx-auto mb-4" aria-hidden="true">
+<section class="error-page mx-auto hero-stagger hero-stagger-1" aria-labelledby="errorTitle">
+  <div class="studio-card p-4 p-md-5">
+    <div class="error-icon mb-4" aria-hidden="true">
+      {% if error_code == 413 %}
+      <i data-lucide="file-warning" width="28" height="28" stroke-width="1.75"></i>
+      {% elif error_code == 500 or error_code == 503 %}
+      <i data-lucide="alert-triangle" width="28" height="28" stroke-width="1.75"></i>
+      {% else %}
+      <i data-lucide="file-x" width="28" height="28" stroke-width="1.75"></i>
+      {% endif %}
+    </div>
+    <p class="eyebrow mb-2">Request could not be completed</p>
+    <p class="error-code mb-2">{{ error_code }}</p>
+    <h1 class="h2 mb-3" id="errorTitle">{{ error_title }}</h1>
+    <p class="text-muted-studio mb-3">{{ error_message }}</p>
     {% if error_code == 413 %}
-    <i class="bi bi-file-earmark-excel"></i>
-    {% elif error_code == 500 %}
-    <i class="bi bi-exclamation-triangle"></i>
+    <p class="small text-muted-studio mb-4">
+      Please choose a smaller JPEG or PNG image and try again.
+    </p>
+    {% elif error_code == 400 %}
+    <p class="small text-muted-studio mb-4">
+      Check that you selected a supported image before submitting.
+    </p>
     {% else %}
-    <i class="bi bi-file-earmark-x"></i>
+    <p class="small text-muted-studio mb-4">
+      Please try again later. Your image has not been assessed by this request.
+    </p>
     {% endif %}
+    <a class="btn btn-primary" href="{{ url_for('main.index') }}">
+      <i data-lucide="arrow-left" width="16" height="16" stroke-width="1.75" aria-hidden="true"></i>
+      Return to Upload
+    </a>
   </div>
-  <p class="eyebrow mb-2">Request could not be completed</p>
-  <p class="error-code mb-2">{{ error_code }}</p>
-  <h1 class="h2 mb-3" id="errorTitle">{{ error_title }}</h1>
-  <p class="text-secondary mb-4">{{ error_message }}</p>
-  {% if error_code == 413 %}
-  <p class="small text-secondary mb-4">
-    Please choose a smaller JPEG or PNG image and try again.
-  </p>
-  {% elif error_code == 400 %}
-  <p class="small text-secondary mb-4">
-    Check that you selected a supported image before submitting.
-  </p>
-  {% else %}
-  <p class="small text-secondary mb-4">
-    Please try again later. Your image has not been assessed by this request.
-  </p>
-  {% endif %}
-  <a class="btn btn-primary" href="{{ url_for('main.index') }}">
-    <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Return to Upload
-  </a>
 </section>
 {% endblock %}

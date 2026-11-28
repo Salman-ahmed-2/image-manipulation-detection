@@ -113,8 +113,78 @@ class Config:
     MAX_IMAGE_PIXELS: int = 50_000_000  # Pillow decompression bomb protection
     TEMP_FILE_EXPIRY: int = 1800  # 30 minutes in seconds
     PIXEL_VALUE_MAX: float = 255.0
+    METADATA_VALUE_SCAN_LIMIT: int = 16_384
+    C2PA_TRUST_ANCHORS_PATH: Optional[Path] = (
+        Path(os.environ["C2PA_TRUST_ANCHORS_PATH"]).expanduser()
+        if os.getenv("C2PA_TRUST_ANCHORS_PATH")
+        else None
+    )
     MAX_ANALYSIS_LATENCY_SECONDS: float = 5.0
     PERFORMANCE_TEST_ITERATIONS: int = 10
+
+    # -------------------------------------------------------------------------
+    # Stage 1 — Metadata & Provenance Filter
+    # -------------------------------------------------------------------------
+    STAGE1_MAX_METADATA_BYTES: int = 2 * 1024 * 1024  # stop raw chunk scan at 2 MB
+
+    # IPTC digital source type vocabulary values recognized as AI-origin.
+    STAGE1_AI_SOURCE_TYPES: frozenset[str] = frozenset({
+        "trainedalgorithmicmedia",
+        "compositewithtrainedalgorithmicmedia",
+        "algorithmicmedia",
+        "compositesynthetic",
+    })
+
+    # (lowercase marker, display name) — add new generators in one line.
+    STAGE1_AI_GENERATOR_MARKERS: tuple[tuple[str, str], ...] = (
+        ("midjourney", "Midjourney"),
+        ("dall-e", "DALL-E"),
+        ("dalle", "DALL-E"),
+        ("openai", "OpenAI"),
+        ("chatgpt", "ChatGPT / DALL-E"),
+        ("gemini", "Google Gemini"),
+        ("imagen", "Google Imagen"),
+        ("firefly", "Adobe Firefly"),
+        ("stable diffusion", "Stable Diffusion"),
+        ("sdxl", "Stable Diffusion XL"),
+        ("stability.ai", "Stability AI"),
+        ("stability ai", "Stability AI"),
+        ("automatic1111", "AUTOMATIC1111"),
+        ("comfyui", "ComfyUI"),
+        ("invokeai", "InvokeAI"),
+        ("fooocus", "Fooocus"),
+        ("novelai", "NovelAI"),
+        ("leonardo", "Leonardo AI"),
+        ("ideogram", "Ideogram"),
+        ("flux", "Flux"),
+        ("bing image creator", "Microsoft Bing Image Creator"),
+        ("microsoft designer", "Microsoft Designer"),
+        ("canva ai", "Canva AI"),
+        ("meta ai", "Meta AI"),
+        ("generative ai", "Generative AI"),
+        ("ai generated", "AI Generated"),
+        ("made with ai", "Made with AI"),
+    )
+
+    # Markers for Stable Diffusion AUTOMATIC1111/Forge-style parameter chunks.
+    STAGE1_SD_PARAMETER_MARKERS: tuple[str, ...] = (
+        "steps:",
+        "sampler:",
+        "cfg scale:",
+        "seed:",
+        "model hash:",
+    )
+
+    # EXIF tag names (lowercase) for source-classification in evidence items.
+    STAGE1_EXIF_FIELDS: frozenset[str] = frozenset({
+        "software",
+        "imagedescription",
+        "usercomment",
+        "artist",
+        "make",
+        "model",
+        "copyright",
+    })
 
     # Magic byte signatures for verification
     MAGIC_BYTES: dict[str, bytes] = {
@@ -203,6 +273,15 @@ class Config:
         "This is a generator-specific result, not a universal real-world accuracy estimate. "
         "Its performance on other unseen generators or arbitrary real-world images has "
         "not been established; do not treat it as a reliable universal AI-image detector."
+    )
+    C2PA_PROVENANCE_NOTICE: str = (
+        "A trusted C2PA manifest contains an explicit AI-origin assertion. This verifies "
+        "the signed provenance claim, not the truth of every statement about the image."
+    )
+    STAGE1_METADATA_NOTICE: str = (
+        "AI-generation metadata was found embedded in this file (e.g. generation parameters "
+        "or a known AI tool name). Unsigned metadata can be forged; this finding is a strong "
+        "signal but not cryptographic proof."
     )
     CIFAKE_REPORT_TITLE: str = "CIFAKE AI-GENERATED VS. REAL IMAGE CLASSIFIER"
     CIFAKE_REPORT_SUBTITLE: str = "Automated Classification Summary Report"

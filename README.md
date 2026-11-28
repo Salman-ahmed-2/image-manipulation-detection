@@ -83,6 +83,23 @@ python run.py
 
 The application will be available at **http://127.0.0.1:5000** by default.
 
+## Metadata-First Provenance Checks
+
+Every validated upload is checked for C2PA Content Credentials and common EXIF/XMP
+generator hints before model inference. Only a **Trusted** C2PA manifest with an
+explicit AI-origin action skips the model. This requires a PEM trust-anchor list
+configured with `C2PA_TRUST_ANCHORS_PATH` in `.env`; without it, C2PA claims do not
+bypass inference. Obtain trust anchors from the official
+[Content Credentials trust list](https://contentcredentials.org/trust/anchors.pem).
+
+EXIF/XMP tags such as Stable Diffusion parameters or ComfyUI software names are
+unverified and spoofable: they are displayed as clues, never treated as proof, and
+the selected model still runs. Missing or unverifiable provenance also falls through
+to model inference. The metadata scan includes nested XMP fields and the active
+C2PA manifest's generator/assertion text, so Gemini markers are reported even when
+they are carried in Content Credentials rather than ordinary EXIF tags. Neither
+metadata nor model output guarantees that an image is authentic or AI-generated.
+
 ---
 
 ## Compare the CIFAKE Models
