@@ -74,11 +74,11 @@ cp .env.example .env
 python run.py
 ```
 
-> **Note:** The app loads the CIFAKE CNN from
+> **Note:** The app loads the original CIFAKE CNN from
 > `artifacts/cifake/cifake_training_outputs/models/cifake_custom_cnn.keras`.
 > It also downloads the pinned Hugging Face ViT weights the first time the app
-> starts with network access; downloaded weights are cached by Hugging Face. Choose
-> either model in the upload form. The app does not train either model.
+> starts with network access; downloaded weights are cached by Hugging Face.
+> The face-fine-tuning outputs are retained as separate artifacts and are not active.
 > Each model uses separate preprocessing, and neither is a universal AI-image detector.
 
 The application will be available at **http://127.0.0.1:5000** by default.
@@ -93,11 +93,11 @@ CIFAKE test split. It reports accuracy and other metrics without retraining.
 These results measure performance on CIFAKE only and do not establish real-world
 AI-image detection accuracy.
 
-To further fine-tune both existing classifiers on Kaggle's real/AI human-face
-images, use [`notebooks/colab/07_finetune_cifake_models_on_faces.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_faces.ipynb).
-It keeps validation and test images separate and writes new checkpoints without
-overwriting the current app models. Fine-tuning on faces can reduce performance
-on non-face images.
+To further fine-tune both existing classifiers for general AI-vs-real images,
+use [`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb).
+It downloads the Cashbowman Kaggle dataset using KaggleHub, keeps validation and
+test images separate, and writes new checkpoints without overwriting the current
+app models.
 
 ---
 

@@ -115,7 +115,7 @@ class ModelLoader:
 
     @classmethod
     def _load_huggingface_model(cls) -> None:
-        """Load the pinned Hugging Face ViT and its matching image processor."""
+        """Load the pinned Hugging Face ViT and its matching processor."""
         name = Config.HUGGINGFACE_MODEL_NAME
         cls._registry.pop(name, None)
         cls._load_errors.pop(name, None)
