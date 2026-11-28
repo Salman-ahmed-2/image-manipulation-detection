@@ -152,17 +152,17 @@ class Config:
 
     # CIFAKE Real-vs-AI-Generated classification configuration
     CIFAKE_MODEL_DIR: Path = (
-        ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs_v2" / "cnn"
+        ARTIFACTS_DIR / "cifake" / "ai_vs_real_genimage_outputs_v3" / "cnn"
     )
     MODEL_PATH_CIFAKE_CNN: Path = (
-        CIFAKE_MODEL_DIR / "cifake_custom_cnn_ai_vs_real_further_finetuned.keras"
+        CIFAKE_MODEL_DIR / "cifake_custom_cnn_ai_vs_real_genimage_v3.keras"
     )
     CIFAKE_MODEL_NAME: str = "cifake_cnn"
     HUGGINGFACE_MODEL_NAME: str = "huggingface_vit"
     HUGGINGFACE_MODEL_ID: str = "dima806/ai_vs_real_image_detection"
     HUGGINGFACE_MODEL_REVISION: str = "5d647683672ffd0080441f4e8b4345934c44cc61"
     HUGGINGFACE_FINETUNED_MODEL_DIR: Path = (
-        ARTIFACTS_DIR / "cifake" / "ai_vs_real_finetuning_outputs_v2" / "huggingface_vit"
+        ARTIFACTS_DIR / "cifake" / "ai_vs_real_genimage_outputs_v3" / "huggingface_vit"
     )
     CIFAKE_SUPPORTED_MODELS: tuple[str, ...] = (
         CIFAKE_MODEL_NAME,
@@ -188,22 +188,21 @@ class Config:
     HUGGINGFACE_INPUT_SHAPE: Tuple[int, int, int] = (224, 224, 3)
     HUGGINGFACE_TARGET_SIZE: Tuple[int, int] = (224, 224)
     HUGGINGFACE_LIMITATION_NOTICE: str = (
-        "This ViT was further fine-tuned on a Kaggle real-vs-AI image dataset. It scored "
-        "78.8% accuracy on a 146-image random test split from that dataset. This split "
-        "has been used during prior fine-tuning, so it is not an independent evaluation "
-        "and does not establish accuracy on unseen generators or arbitrary real-world images."
+        "This ViT checkpoint was retained from the previous fine-tuning run because the "
+        "GenImage continuation did not improve validation accuracy. It scored 55.03% on "
+        "10,000 images from the held-out Midjourney generator. This is one generator-specific "
+        "result, not a universal real-world accuracy estimate."
     )
     CIFAKE_CLASS_LABELS: dict[int, str] = {
         0: "Real photo",
         1: "AI-generated",
     }
     CIFAKE_LIMITATION_NOTICE: str = (
-        "Limitation notice: This CIFAKE CNN was further fine-tuned on a Kaggle "
-        "real-vs-AI image dataset and scored 49.3% accuracy on its 146-image random "
-        "test split. This split has been used during prior fine-tuning, so this is not "
-        "an independent evaluation. Its performance on unseen generators or arbitrary "
-        "real-world images has not been established; do not treat it as a reliable "
-        "universal AI-image detector."
+        "Limitation notice: This CNN was further fine-tuned on GenImage and scored "
+        "50.93% accuracy on 10,000 images from the held-out Midjourney generator. "
+        "This is a generator-specific result, not a universal real-world accuracy estimate. "
+        "Its performance on other unseen generators or arbitrary real-world images has "
+        "not been established; do not treat it as a reliable universal AI-image detector."
     )
     CIFAKE_REPORT_TITLE: str = "CIFAKE AI-GENERATED VS. REAL IMAGE CLASSIFIER"
     CIFAKE_REPORT_SUBTITLE: str = "Automated Classification Summary Report"

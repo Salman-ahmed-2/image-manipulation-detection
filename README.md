@@ -8,15 +8,15 @@
 
 A Flask web application that classifies uploaded images as **Real photo** (`0`) or **AI-generated** (`1`) using either a Custom CNN trained on CIFAKE or a Hugging Face ViT classifier.
 
-> **Limitation Notice:** The active further-fine-tuned CNN scored **49.3%** and the active ViT scored **78.8%** on the same 146-image random test split from their Kaggle fine-tuning dataset. This test split has been used during prior fine-tuning, so these results are not an independent evaluation. Neither score establishes performance on unseen generators or arbitrary real-world images.
+> **Limitation Notice:** The active GenImage v3 CNN scored **50.93%** and the active ViT checkpoint scored **55.03%** on 10,000 images from the held-out Midjourney generator. The ViT continuation did not improve validation accuracy, so its checkpoint was retained from v2. These scores are generator-specific and do not establish accuracy on other generators or arbitrary real-world images.
 
 ---
 
 ## Key Features
 
 - 📤 **Image Upload** — Drag-and-drop or file-picker upload for JPG/JPEG/PNG images (up to 16 MB)
-- 🔍 **Further-fine-tuned CIFAKE CNN** — Resizes images to 32×32 RGB (Pillow bilinear resampling, normalized to `[0, 1]`) and classifies them as `Real photo` or `AI-generated`
-- 🤗 **Further-fine-tuned Hugging Face ViT** — Optional second classifier loaded locally from `artifacts/cifake/ai_vs_real_finetuning_outputs_v2/huggingface_vit/` with its matching image processor.
+- 🔍 **GenImage v3 CNN** — Resizes images to 32×32 RGB (Pillow bilinear resampling, normalized to `[0, 1]`) and classifies them as `Real photo` or `AI-generated`
+- 🤗 **Hugging Face ViT** — Optional second classifier loaded locally from `artifacts/cifake/ai_vs_real_genimage_outputs_v3/huggingface_vit/` with its matching image processor.
 - 📊 **Model Score** — Displays the selected classifier's sigmoid or softmax score for the AI-generated class
 - 📄 **PDF Summary Report** — Downloadable PDF summary including the prediction, score type, and model-specific limitation notice
 - ⚡ **Privacy-First** — No permanent storage of user images; temporary files are cleaned up per session
@@ -74,11 +74,12 @@ cp .env.example .env
 python run.py
 ```
 
-> **Note:** The app loads the further-fine-tuned CNN from
-> `artifacts/cifake/ai_vs_real_finetuning_outputs_v2/cnn/` and the matching ViT from
-> `artifacts/cifake/ai_vs_real_finetuning_outputs_v2/huggingface_vit/`. The CNN scored
-> only 49.3% on the 146-image test split, so its predictions may be unreliable. Both
-> models use separate preprocessing, and neither is a universal AI-image detector.
+> **Note:** The app loads the GenImage v3 CNN and ViT files from
+> `artifacts/cifake/ai_vs_real_genimage_outputs_v3/`. The CNN scored 50.93% on a
+> 10,000-image Midjourney holdout; the ViT scored 55.03%, but its v3 continuation did
+> not improve validation and the v2 weights were retained. These results do not prove
+> performance across other generators. Both models use separate preprocessing, and
+> neither is a universal AI-image detector.
 
 The application will be available at **http://127.0.0.1:5000** by default.
 
@@ -92,21 +93,21 @@ CIFAKE test split. It reports accuracy and other metrics without retraining.
 These results measure performance on CIFAKE only and do not establish real-world
 AI-image detection accuracy.
 
-To further fine-tune both current classifiers, use
-[`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real.ipynb)
-in Colab. This version continues from `ai_vs_real_finetuning_outputs_v2.zip` and
+To further fine-tune only the Hugging Face ViT, use
+[`notebooks/colab/07_finetune_cifake_models_on_ai_vs_real_.ipynb`](./notebooks/colab/07_finetune_cifake_models_on_ai_vs_real_.ipynb)
+in Colab. This version continues from `ai_vs_real_genimage_outputs_v3.zip` and
 uses the official [GenImage benchmark](https://github.com/GenImage-Dataset/GenImage).
 Use the [official GenImage folder shared by its owner](https://drive.google.com/drive/folders/1jGt10bwTbhEZuGXLyvrCuxOI0cBqQ1FS?usp=sharing);
 you do not need to own it. Add a shortcut under `My Drive/GenImage` in the same
 Google account used by Colab. If the shared folders contain archives rather than
 the extracted image folders, copy/download and extract the required archives into
 your own Drive; this can require substantial storage.
-The notebook targets 50,000
-real and 50,000 generated training images, validates on ADM, and tests on the
+The notebook targets 50,000 real and 50,000 generated training images. It balances
+generated training images across six generators, validates on ADM, and tests on the
 held-out Midjourney generator with exact-hash duplicate filtering. It exports
-`ai_vs_real_genimage_outputs_v3.zip` separately and does not switch the app models
-automatically. A 90% unseen-generator accuracy is not guaranteed; the GenImage
-paper reports roughly 67–70% average cross-generator accuracy for several
+`ai_vs_real_vit_genimage_outputs_v4.zip` separately and does not switch the app
+models automatically. A 90% unseen-generator accuracy is not guaranteed; the
+GenImage paper reports roughly 67–70% average cross-generator accuracy for several
 standard detectors.
 
 ---
